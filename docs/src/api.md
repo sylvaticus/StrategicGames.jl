@@ -1,8 +1,8 @@
 # The BetaGameTheory Module
 
- ```@docs
- BetaGameTheory
- ```
+```@docs
+BetaGameTheory
+```
 
 ## Module Index
 

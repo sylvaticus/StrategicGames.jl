@@ -1,3 +1,8 @@
+"""
+    BetaGameTheory module
+
+Provide utility functions to work with strategic games, including finding Hash equilibrium for n-player simultaneous games when mixed strategies are allowed. 
+"""
 module BetaGameTheory
 
 greet() = print("Hello World!")
@@ -12,10 +17,10 @@ Sum the numeric "2" to whatever it receives as input
 A more detailed explanation can go here, although I guess it is not needed in this case
 
 # Arguments
-* `x`: The amount to which we want to add 2
+- `x`: The amount to which we want to add 2
 
 # Notes
-* Notes can go here
+- Notes can go here
 
 # Examples
 ```julia
