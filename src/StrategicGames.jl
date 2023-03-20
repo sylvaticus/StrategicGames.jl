@@ -126,7 +126,7 @@ Find a Nash Equilibrium for n-players simultaneous games when mixed strategies a
 - verbosity: an integer parameter to pass to the inner solver (currently Ipopt) [def: `0`]
 
 # Notes
-- This funcion uses the LCP (Linear Complementarity) formulation from  Lemke-Howson [1964] (for nplayers >3 the algorithm actually is not linear)
+- This function uses the LCP (Linear Complementarity) formulation from  Lemke-Howson [1964] (for nplayers >3 the algorithm actually is not linear)
 - The implementation uses the JuMP modelling language with the Ipopt solver engine
 - There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different equilibriums may be reached by setting different initial points 
 
@@ -134,6 +134,17 @@ Find a Nash Equilibrium for n-players simultaneous games when mixed strategies a
 - A named tuple with the following elements: `status`,`equilibrium_strategies`,`expected_payoffs`
 
 # Example
+```julia
+julia> payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (-1, -1)  (-3, 0)
+ (0, -3)   (-2, -2)
+julia> eq     = nash_lcp(expand_dimensions(payoff));
+julia> eq_strategies = eq.equilibrium_strategies
+2-element Vector{Vector{Float64}}:
+ [-4.049752569180346e-11, 1.0000000000404976]
+ [-4.0497525691839856e-11, 1.0000000000404976]
+```
 """
 function nash_lcp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=0)  
     nActions = size(payoff)[1:end-1]

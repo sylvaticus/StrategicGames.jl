@@ -15,9 +15,15 @@ While written in Julia, the library is easily accessible in R or Python with [`J
 ## Examples
 
 ```julia
-# Example from https://www.youtube.com/watch?v=bKrwQKUT0v8
+julia> using Pkg; Pkg.add("StrategicGames") # only once to install the library
 julia> using StrategicGames
+```
 
+### 3-players, 2 options per player with payoff depending on number of players choosing the same option
+
+The 3 players in the game can choose between `X` or `Y` with payoffs respectively `2nₓ - 2nₓ²+3` and `4-nᵧ` where `nₓ` and `nᵧ` represent the number of players that choose `X` or `Y`.
+(This example is taken from https://www.youtube.com/watch?v=bKrwQKUT0v8 where it is analytically solved)
+```julia
 julia> U = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
             (3,3,3)  ; (2,4,2)  ;; (4,2,2) ; (1,1,1)  ;;;]
 2×2×2 Array{Tuple{Int64, Int64, Int64}, 3}:
@@ -76,6 +82,21 @@ julia> expected_payoff(payoff_array,eq_strategies)
  2.1622776601683795
  2.1622776601683795
  ```
+
+### Prisoner's dilemma
+ ```julia
+julia> payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (-1, -1)  (-3, 0)
+ (0, -3)   (-2, -2)
+julia> eq     = nash_lcp(expand_dimensions(payoff));
+julia> eq_strategies = eq.equilibrium_strategies
+2-element Vector{Vector{Float64}}:
+ [-4.049752569180346e-11, 1.0000000000404976]
+ [-4.0497525691839856e-11, 1.0000000000404976]
+```
+
+
 
  ## Other libraries
 
