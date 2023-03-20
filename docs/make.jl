@@ -1,9 +1,9 @@
 using Documenter
-using BetaGameTheory
+using StrategicGames
 
 push!(LOAD_PATH,"../src/")
 makedocs(
-    sitename="BetaGameTheory Documentation",
+    sitename="StrategicGames Documentation",
     pages = [
         "Index" => "index.md",
         "API"   => "api.md"
@@ -15,6 +15,6 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/sylvaticus/BetaGameTheory.jl.git",
+    repo = "github.com/sylvaticus/StrategicGames.jl.git",
     devbranch = "main"
 )

@@ -1,18 +1,18 @@
-# The BetaGameTheory Module
+# The StrategicGames Module
 
 ```@docs
-BetaGameTheory
+StrategicGames
 ```
 
 ## Module Index
 
 ```@index
-Modules = [BetaGameTheory]
+Modules = [StrategicGames]
 Order   = [:constant, :type, :function, :macro]
 ```
 ## Detailed API
 
 ```@autodocs
-Modules = [BetaGameTheory]
+Modules = [StrategicGames]
 Order   = [:constant, :type, :function, :macro]
 ```

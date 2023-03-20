@@ -1,4 +1,4 @@
-using Test, BetaGameTheory
+using Test, StrategicGames
 
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]

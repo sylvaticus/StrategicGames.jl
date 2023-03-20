@@ -1,21 +1,22 @@
-# BetaGameTheory.jl
-A set of functions in pure Julia for Game Theory
+# StrategicGames.jl
+A set of functions in pure Julia for analysing strategic games using the concepts and tools of the Game Theory
 
 In particular, `nash_lcp(payoff_tensor;init,verbosity)` implements the LCP algorithm to find a Nash Equilibrium for n-players simultaneous games when mixed strategies are allowed.
 
-The library is easily usable in R or Python with [`JuliaCall`](https://github.com/Non-Contradiction/JuliaCall) and [`PyJulia`](https://github.com/JuliaPy/pyjulia) packages respectively.
+While written in Julia, the library is easily accessible in R or Python with [`JuliaCall`](https://github.com/Non-Contradiction/JuliaCall) and [`PyJulia`](https://github.com/JuliaPy/pyjulia) packages respectively.
 
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sylvaticus.github.io/BetaGameTheory.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://sylvaticus.github.io/BetaGameTheory.jl/dev)
-[![Build status (Github Actions)](https://github.com/sylvaticus/BetaGameTheory.jl/workflows/CI/badge.svg)](https://github.com/sylvaticus/BetaGameTheory.jl/actions)
-[![codecov.io](http://codecov.io/github/sylvaticus/BetaGameTheory.jl/coverage.svg?branch=main)](http://codecov.io/github/sylvaticus/BetaGameTheory.jl?branch=main)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sylvaticus.github.io/StrategicGames.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://sylvaticus.github.io/StrategicGames.jl/dev)
+[![Build status (Github Actions)](https://github.com/sylvaticus/StrategicGames.jl/workflows/CI/badge.svg)](https://github.com/sylvaticus/StrategicGames.jl/actions)
+[![codecov.io](http://codecov.io/github/sylvaticus/StrategicGames.jl/coverage.svg?branch=main)](http://codecov.io/github/sylvaticus/StrategicGames.jl?branch=main)
 
 
+## Examples
 
 ```julia
 # Example from https://www.youtube.com/watch?v=bKrwQKUT0v8
-julia> using BetaGameTheory
+julia> using StrategicGames
 
 julia> U = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
             (3,3,3)  ; (2,4,2)  ;; (4,2,2) ; (1,1,1)  ;;;]
@@ -75,3 +76,10 @@ julia> expected_payoff(payoff_array,eq_strategies)
  2.1622776601683795
  2.1622776601683795
  ```
+
+ ## Other libraries
+
+ - [Nash.jl](https://github.com/KrainskiL/Nash.jl)
+ - [GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)
+ - [Nashpy](https://github.com/drvinceknight/Nashpy): two players only
+ - [Gambit](http://www.gambit-project.org/)

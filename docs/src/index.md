@@ -1,6 +1,6 @@
-# BetaGameTheory
+# StrategicGames
 
-Documentation for BetaGameTheory
+Documentation for StrategicGames
 
-[GitHub repository](https://github.com/sylvaticus/BetaGameTheory.jl)
+[GitHub repository](https://github.com/sylvaticus/StrategicGames.jl)
  
