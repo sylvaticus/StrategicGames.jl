@@ -1,7 +1,7 @@
 """
     StrategicGames module
 
-Provide utility functions to work with strategic games, including finding Hash equilibrium for n-player simultaneous games when mixed strategies are allowed. 
+Provide utility functions to work with strategic games, including finding Nash equilibrium for n-player simultaneous games when mixed strategies are allowed. 
 """
 module StrategicGames
 
@@ -126,8 +126,8 @@ Find a Nash Equilibrium for n-players simultaneous games when mixed strategies a
 - verbosity: an integer parameter to pass to the inner solver (currently Ipopt) [def: `0`]
 
 # Notes
-- This function uses the LCP (Linear Complementarity) formulation from  Lemke-Howson [1964] (for nplayers >3 the algorithm actually is not linear)
-- The implementation uses the JuMP modelling language with the Ipopt solver engine
+- This function uses a LCP (Linear Complementarity) formulation (for nplayers >3 the algorithm actually is not linear)
+- The implementation uses the JuMP modelling language with the Ipopt solver engine (and hence it uses an interior point method instead of the pivotal approach used in the original Lemke-Howson [1964] algorithm)
 - There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different equilibriums may be reached by setting different initial points 
 
 # Returns
