@@ -8,7 +8,9 @@ makedocs(
         "Index" => "index.md",
         "API"   => "api.md"
     ],
-    format = Documenter.HTML(prettyurls = false)
+    format = Documenter.HTML(prettyurls = false,
+        analytics = "G-DC4KL97F1C",
+    )
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
