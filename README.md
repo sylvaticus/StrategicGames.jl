@@ -1,7 +1,7 @@
 # StrategicGames.jl
 A set of functions in pure Julia for analysing strategic games using the concepts and tools of the Game Theory
 
-In particular, `nash_lcp(payoff_tensor;init,verbosity)` implements the LCP algorithm to find a Nash Equilibrium for n-players simultaneous games when mixed strategies are allowed.
+In particular, `nash_cp(payoff_tensor;init,verbosity)` implements the LCP algorithm to find a Nash Equilibrium for n-players simultaneous games when mixed strategies are allowed.
 
 While written in Julia, the library is easily accessible in R or Python with [`JuliaCall`](https://github.com/Non-Contradiction/JuliaCall) and [`PyJulia`](https://github.com/JuliaPy/pyjulia) packages respectively.
 
@@ -55,7 +55,7 @@ julia> payoff_array = expand_dimensions(U) # from n-dimensional array of tuples 
 [:, :, 2, 3] =
  3  2
  2  1
-julia> eq  = nash_lcp(payoff_array)
+julia> eq  = nash_cp(payoff_array)
 (status = MathOptInterface.LOCALLY_SOLVED, equilibrium_strategies = [[0.5811388300841898, 0.4188611699158103], [0.5811388300841898, 0.4188611699158103], [0.5811388300841898, 0.41886116991581035]], expected_payoffs = [2.16227766016838, 2.16227766016838, 2.16227766016838])
 julia> eq_strategies = eq.equilibrium_strategies
 3-element Vector{Vector{Float64}}:
@@ -79,7 +79,7 @@ julia> payoff_matrix = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
 2×2 Matrix{Tuple{Int64, Int64}}:
  (-1, -1)  (-3, 0)
  (0, -3)   (-2, -2)
-julia> eq            = nash_lcp(expand_dimensions(payoff_matrix));
+julia> eq            = nash_cp(expand_dimensions(payoff_matrix));
 julia> eq_strategies = eq.equilibrium_strategies
 2-element Vector{Vector{Float64}}:
  [-4.049752569180346e-11, 1.0000000000404976]
@@ -92,7 +92,7 @@ julia> payoff_matrix = [(1,-1) (-1,1); (-1,1) (1, -1)]
 2×2 Matrix{Tuple{Int64, Int64}}:
  (1, -1)  (-1, 1)
  (-1, 1)  (1, -1)
-julia> eq            = nash_lcp(expand_dimensions(payoff_matrix));
+julia> eq            = nash_cp(expand_dimensions(payoff_matrix));
 julia> eq_strategies = eq.equilibrium_strategies
 2-element Vector{Vector{Float64}}:
  [0.5, 0.5]
@@ -105,7 +105,7 @@ julia> payoff_matrix = [(2,1) (0,0); (0,0) (1,2)]
 2×2 Matrix{Tuple{Int64, Int64}}:
  (2, 1)  (0, 0)
  (0, 0)  (1, 2)
-julia> eq            = nash_lcp(expand_dimensions(payoff_matrix));
+julia> eq            = nash_cp(expand_dimensions(payoff_matrix));
 julia> eq_strategies = eq.equilibrium_strategies 
 2-element Vector{Vector{Float64}}:
  [0.6666666663602984, 0.33333333363970163]
@@ -121,7 +121,7 @@ julia> payoff_matrix = [(-1,1) (1,-1); (1,-1) (0, 0)]
 2×2 Matrix{Tuple{Int64, Int64}}:
  (-1, 1)  (1, -1)
  (1, -1)  (0, 0)
-julia> eq            = nash_lcp(expand_dimensions(payoff_matrix));
+julia> eq            = nash_cp(expand_dimensions(payoff_matrix));
 julia> eq_strategies = eq.equilibrium_strategies
 2-element Vector{Vector{Float64}}:
  [0.3333333333332723, 0.6666666666667278]

@@ -1,5 +1,5 @@
 using Test, StrategicGames
-
+import StrategicGames: outer_product
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
 payoff_array = expand_dimensions(payoff_tuple)
@@ -25,7 +25,7 @@ s = [[0.5,0.5],[0.5,0.5]]
 U = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
      (3,3,3)  ; (2,4,2)  ;; (4,2,2) ; (1,1,1)  ;;;]
 payoff_array = expand_dimensions(U)
-eq  = nash_lcp(payoff_array)
+eq  = nash_cp(payoff_array)
 eq_strategies = eq.equilibrium_strategies
 p = -1 + sqrt(10)/2
 @test eq_strategies ≈ [[p,1-p],[p,1-p],[p,1-p]]
@@ -35,8 +35,27 @@ u = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
 @test dominated_strategies(u,2,strict=true) == [1]
 @test dominated_strategies(u,2,strict=false) == [1,3]
 
-
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
      (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
-payoff=expand_dimensions(u)
+payoff = expand_dimensions(u)
 @test dominated_strategies(payoff,2,strict=false) == [3]
+
+
+#=
+# TODO: check why nash_cp() doesn't work with this one:
+u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
+     (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
+=#
+u = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
+     (3,3,3)  ; (2,4,2)  ;; (4,2,2) ; (1,1,1)  ;;;]
+payoff        = expand_dimensions(u)
+eq            = nash_cp(payoff)
+eq_strategies = eq.equilibrium_strategies
+opt_u         = best_response(payoff,[eq_strategies[1],[0.33,0.33,0.34],eq_strategies[3]],2).expected_payoff
+nash_u         = eq.expected_payoffs[2]
+@test isapprox(opt_u,nash_u)
+
+@test is_best_response(payoff,eq_strategies,2)
+
+@test is_nash(payoff,eq_strategies) == true
+

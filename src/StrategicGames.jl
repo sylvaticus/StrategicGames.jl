@@ -1,14 +1,16 @@
 """
     StrategicGames module
 
-Provide utility functions to work with strategic games, including finding Nash equilibrium for n-player simultaneous games when mixed strategies are allowed. 
+Provide utility functions to work with strategic games, including finding Nash equilibrium simultaneous games when mixed strategies are allowed. 
+
+All functions work with generic n players (the examples generally show 2 players for simplicity)
 """
 module StrategicGames
 
-using LinearAlgebra, JuMP, Ipopt
+using LinearAlgebra, JuMP, Ipopt, GLPK
 
-export expand_dimensions, outer_product
-export expected_value, expected_payoff, nash_lcp
+export expand_dimensions
+export expected_value, expected_payoff, nash_cp
 export dominated_strategies, best_response, is_best_response, is_nash
 
 """
@@ -18,6 +20,7 @@ Convenence function to transform a _N_ dimensional array of tuples in a _N+1_ di
 
 # Example:
 ```julia
+julia> using StrategicGames
 julia> payoff_tuple = [(1,-1) (-1,1) (1,0); (-1,1) (1, -1) (0,1)] # 2 players, with 2 and 3 actions respectively
 2×3 Matrix{Tuple{Int64, Int64}}:
  (1, -1)  (-1, 1)  (1, 0)
@@ -54,6 +57,7 @@ Return the outer product of several vectors (or a vector of vectors)
 
 # Example:
 ```julia
+julia> using StrategicGames
 julia> vs = [[0.2,0.8], [0.1,0.9], [0.2,0.2,0.6]];
 
 julia> outer_product(vs)
@@ -117,9 +121,9 @@ end
 
 # use normalise_strategies only when the solver find an approximate solution and you want to return approximate probabilities
 """
-    nash_lcp(payoff_tensor;init,verbosity)
+    nash_cp(payoff_tensor;init,verbosity)
 
-Find a Nash Equilibrium for n-players simultaneous games when mixed strategies are allowed using the LCP algorithm.
+Find a Nash Equilibrium for n-players simultaneous games when mixed strategies are allowed using the Complementarity Problem algorithm.
 
 # Parameters
 - `payoff_tensor`: the nplayers+1 dimension payoff tensor of payoffs for the various players
@@ -136,18 +140,19 @@ Find a Nash Equilibrium for n-players simultaneous games when mixed strategies a
 
 # Example
 ```julia
+julia> using StrategicGames
 julia> payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma
 2×2 Matrix{Tuple{Int64, Int64}}:
  (-1, -1)  (-3, 0)
  (0, -3)   (-2, -2)
-julia> eq     = nash_lcp(expand_dimensions(payoff));
+julia> eq     = nash_cp(expand_dimensions(payoff));
 julia> eq_strategies = eq.equilibrium_strategies
 2-element Vector{Vector{Float64}}:
  [-4.049752569180346e-11, 1.0000000000404976]
  [-4.0497525691839856e-11, 1.0000000000404976]
 ```
 """
-function nash_lcp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=0)  
+function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=0)  
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff tensor and the number of players")
@@ -224,7 +229,8 @@ Return a vector with the positions of the actions for player `player` that are d
 
 # Example
 ```julia
-julia> payoff = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
+julia> using StrategicGames
+julia> payoff_array = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
 2×3×2 Array{Int64, 3}:
 [:, :, 1] =
  3  1  6
@@ -232,7 +238,7 @@ julia> payoff = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
 [:, :, 2] =
  4  5  2
  6  7  7
-julia> dominated_strategies(payoff,2,strict=false) 
+julia> dominated_strategies(payoff_array,2,strict=false) 
 2-element Vector{Int64}:
  1
  3
@@ -258,17 +264,108 @@ function dominated_strategies(payoff,player;strict=true)
     return dominated 
 end
 
+"""
+    best_response(payoff_array,strategy_profile,player)
+
+Return (possibly one of many) best strategy and corrsponding expected payoff for a given player
+
+# Parameters:
+- `payoff_array`: the nplayers+1 array of payoffs
+- `strategy_profile`: the vector of vectors defining the strategies for the N players. The strategy for player n for which the best response is looked is used as init value in the optimisation
+- `player`: counter of the player for which we want to compute the best_response (e.g. 1 or 3)
+
+# Returns:
+- A named tuple with: `expected_payoff`, `optimal_strategy`, `status` (of the underlying optimisation)
+
+# Example:
+```julia
+julia> using StrategicGames
+julia> payoff_array  = [(3,4) (1,5); (4,2) (2,3)] # prisoner's dilemma
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (3, 4)  (1, 5)
+ (4, 2)  (2, 3)
+julia> best_response(expand_dimensions(payoff_array),[[0.5,0.5],[0.5,0.5]],2)
+(expected_payoff = 4.0, optimal_strategy = [0.0, 1.0], status = MathOptInterface.OPTIMAL)
+``
+"""
 function best_response(payoff,strategy_profile,player)
-
+    nActions = size(payoff)[1:end-1]
+    nPlayers = size(payoff)[end]
+    payoff_n = selectdim(payoff,nPlayers+1,player)
+    init = strategy_profile[player]
+    m = Model(GLPK.Optimizer)
+    @variable(m, 0 <= s[j in 1:nActions[player] ] <= 1,  start=init[j])
+    @constraints m begin
+        probabilities,
+            sum(s[j] for j in 1:nActions[player]) == 1
+    end
+    @objective m Max sum(
+        [*(payoff_n[idx],[strategy_profile[n][idx[n]] for n in [1:player-1;player+1:nPlayers]]...,s[idx[player]]) for idx in CartesianIndices(nActions)]  
+    )
+    optimize!(m)
+    #print(m)
+    status = termination_status(m)
+    
+    return (expected_payoff=objective_value(m), optimal_strategy=value.(s), status=status)
 end
 
-function is_best_response(payoff,strategy_profile,player;epsilon=1e-07)
+"""
+    is_best_response(payoff_array,strategy_profile,player;atol=1e-07,rtol=1e-07)
 
+Determine if a given strategy for player `player` is the best response to a given strategy profile given a specific payoff matrix
+
+# Parameters:
+- `payoff_array`: the nplayers+1 array of payoffs
+- `strategy_profile`: the vector of vectors defining the strategies for the N players
+- `player`: counter of the player for which we want to verify if its strategy is a best_response (e.g. 1 or 3)
+- `atol`: absolute tollerance in comparing the expected utility from the given strategy and those from the optimal one [def: `1e-07`]
+- `rtol`: relative tollerance in comparing the expected utility from the given strategy and those from the optimal one [def: `1e-07`]
+
+# Example : 
+```julia
+julia> using StrategicGames
+julia> payoff_array = [(3,4) (1,5); (4,2) (2,3)] # prisoner's dilemma
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (3, 4)  (1, 5)
+ (4, 2)  (2, 3)
+julia> is_best_response(expand_dimensions(payoff_array),[[0,1],[0.5,0.5]],1)
+true
+julia> is_best_response(expand_dimensions(payoff_array),[[0,1],[0.5,0.5]],2)
+false
+```
+"""
+function is_best_response(payoff,strategy_profile,player;atol=1e-07,rtol=1e-07)
+    best_u = best_response(payoff,strategy_profile,player).expected_payoff
+    this_u = expected_payoff(payoff,strategy_profile,player)
+    return isapprox(this_u,best_u,atol=atol,rtol=rtol)
 end
 
-function is_nash(payoff,strategy_profile)
+"""
+    is_nash(payoff_array,strategy_profile;atol=1e-07,rtol=1e-07)
 
+Determine if a strategy profile is a Nash equilibrium for a given payoff matrix, i.e. all strategies are (weak) best responses
 
+# Parameters:
+- `payoff_array`: the nplayers+1 array of payoffs
+- `strategy_profile`: the vector of vectors defining the strategies for the N players
+- `atol`: absolute tollerance in comparing the expected utility from the given strategies and those from the optimal ones [def: `1e-07`]
+- `rtol`: relative tollerance in comparing the expected utility from the given strategies and those from the optimal ones [def: `1e-07`]
+
+# Example : 
+```julia
+julia> using StrategicGames
+julia> payoff_array  = [(3,4) (1,5); (4,2) (2,3)] # prisoner's dilemma
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (3, 4)  (1, 5)
+ (4, 2)  (2, 3)
+julia> is_nash(expand_dimensions(payoff_array),[[0,1],[0,1]])
+true
+```
+"""
+function is_nash(payoff,strategy_profile;atol=1e-07,rtol=1e-07)
+    all([isapprox( best_response(payoff,strategy_profile,i).expected_payoff,
+                   expected_payoff(payoff,strategy_profile,i),
+                   atol=atol,rtol=rtol) for i in 1:ndims(payoff)-1])
 end
 
 
