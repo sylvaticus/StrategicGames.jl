@@ -9,6 +9,7 @@ using LinearAlgebra, JuMP, Ipopt
 
 export expand_dimensions, outer_product
 export expected_value, expected_payoff, nash_lcp
+export dominated_strategies, best_response, is_best_response, is_nash
 
 """
     expand_dimensions(x::AbstractArray{T}
@@ -215,5 +216,60 @@ function nash_lcp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payof
     end
     return (status=status,equilibrium_strategies=optStrategies,expected_payoffs=optU)
 end
+
+"""
+    dominated_strategies(payoff,player;strict=true)
+
+Return a vector with the positions of the actions for player `player` that are dominates by at least one of his other actions.
+
+# Example
+```julia
+julia> payoff = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
+2×3×2 Array{Int64, 3}:
+[:, :, 1] =
+ 3  1  6
+ 2  3  1
+[:, :, 2] =
+ 4  5  2
+ 6  7  7
+julia> dominated_strategies(payoff,2,strict=false) 
+2-element Vector{Int64}:
+ 1
+ 3
+```
+"""
+function dominated_strategies(payoff,player;strict=true)
+    nActions = size(payoff)[1:end-1]
+    nPlayers = size(payoff)[end]
+    payoff_n = selectdim(payoff,nPlayers+1,player)
+    dominated = Int64[]
+    for i in 1:nActions[player]
+        ai = selectdim(payoff_n,player,i) # action to test 
+        for j in 1:nActions[player]
+            i != j || continue
+            aj = selectdim(payoff_n,player,j)           
+            check_dominated = strict ? aj .> ai : aj .>= ai
+            if all(check_dominated)
+                push!(dominated,i)
+                break
+            end 
+        end
+    end
+    return dominated 
+end
+
+function best_response(payoff,strategy_profile,player)
+
+end
+
+function is_best_response(payoff,strategy_profile,player;epsilon=1e-07)
+
+end
+
+function is_nash(payoff,strategy_profile)
+
+
+end
+
 
 end # module StrategicGames

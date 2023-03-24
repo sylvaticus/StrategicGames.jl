@@ -29,3 +29,14 @@ eq  = nash_lcp(payoff_array)
 eq_strategies = eq.equilibrium_strategies
 p = -1 + sqrt(10)/2
 @test eq_strategies ≈ [[p,1-p],[p,1-p],[p,1-p]]
+
+# Testing dominated_strategies
+u = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
+@test dominated_strategies(u,2,strict=true) == [1]
+@test dominated_strategies(u,2,strict=false) == [1,3]
+
+
+u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
+     (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
+payoff=expand_dimensions(u)
+@test dominated_strategies(payoff,2,strict=false) == [3]
