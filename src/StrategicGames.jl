@@ -1,22 +1,25 @@
 """
-    StrategicGames module
+    StrategicGames package
 
-Provide utility functions to work with strategic games, including finding Nash equilibrium simultaneous games when mixed strategies are allowed. 
+Strategic Games provides functionalities to work with strategic games, including finding Nash equilibrium in simultaneous games when mixed strategies are allowed. 
 
-All functions work with generic n players (the examples generally show 2 players for simplicity)
+Unless otherwise stated, all functions work with generic n players (the examples generally show 2 players for simplicity) and assume the payoff "matrix" to be in the form of N-players + 1 dimensional arrays, where each dimension except the last one is given by the number of discrete actions available to each player and the last dimension is given by the number of players.
+A convenient function allows to transform a N-dimensional array of tuples (the payoff for the various players) to the Nplayers+1 dimensional array
+
+
 """
 module StrategicGames
 
 using LinearAlgebra, JuMP, Ipopt, GLPK
 
 export expand_dimensions
-export expected_value, expected_payoff, nash_cp
+export expected_payoff, nash_cp
 export dominated_strategies, best_response, is_best_response, is_nash
 
 """
     expand_dimensions(x::AbstractArray{T}
 
-Convenence function to transform a _N_ dimensional array of tuples in a _N+1_ dimensional array of scalars (the format used for most functions in this package).
+Convenience function to transform a _N_ dimensional array of tuples in a _N+1_ dimensional array of scalars (the format used for most functions in this package).
 
 # Example:
 ```julia
@@ -86,14 +89,14 @@ outer_product(vs...) = prod.(Iterators.product(vs...))
 """
     expected_value(v::Array{N,Real},p::Vector{Vector{Real}}) --> Real
 
-Compute the expected value (scalar) of a N-dimensional value tensor given a vector of N probability vectors, one per each dimension of the value tensor. 
+Compute the expected value (scalar) of a N-dimensional value array given a vector of N probability vectors, one per each dimension of the value array. 
 """
 function expected_value(v,p)
     sum((v .* outer_product(p)))
 end
 #=
 function expected_value_old(v,p)
-    (ndims(v) == length(p) && all(size(v) .== length.(p))) || error("Mismatch dimension or size between the value tensor and the probability vectors")
+    (ndims(v) == length(p) && all(size(v) .== length.(p))) || error("Mismatch dimension or size between the value array and the probability vectors")
     (all([all(>=(0-1e-06 ), v) for v in p])  && all(sum.(p) .> 1 .- 1e-06 ) && all(sum.(p) .< 1 .+ 1e-06 )) || error("p is not a vector of probabilities")
     outsum = 0.0
     comp   = 0.0 #https://en.wikipedia.org/wiki/Kahan_summation_algorithm
@@ -109,7 +112,7 @@ end
 =#
 
 function expected_payoff(payoff_array,s,n)
-    (ndims(payoff_array) == length(s)+1 && all(size(payoff_array)[1:end-1] .== length.(s))) || error("Mismatch dimension or size between the value tensor and the probability vectors")
+    (ndims(payoff_array) == length(s)+1 && all(size(payoff_array)[1:end-1] .== length.(s))) || error("Mismatch dimension or size between the value array and the probability vectors")
     (all([all(>=(0-1e-06 ), v) for v in s])  && all(sum.(s) .> 1 .- 1e-06 ) && all(sum.(s) .< 1 .+ 1e-06 )) || error("s is not a vector of probabilities")
     playerdim  = ndims(payoff_array)
     expected_value(selectdim(payoff_array,playerdim,n),s)
@@ -121,19 +124,19 @@ end
 
 # use normalise_strategies only when the solver find an approximate solution and you want to return approximate probabilities
 """
-    nash_cp(payoff_tensor;init,verbosity)
+    nash_cp(payoff_array;init,verbosity)
 
-Find a Nash Equilibrium for n-players simultaneous games when mixed strategies are allowed using the Complementarity Problem algorithm.
+Find a Nash Equilibrium for N-players simultaneous games when mixed strategies are allowed using the Complementarity Problem formulation.
 
 # Parameters
-- `payoff_tensor`: the nplayers+1 dimension payoff tensor of payoffs for the various players
-- `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action by the players]
-- verbosity: an integer parameter to pass to the inner solver (currently Ipopt) [def: `0`]
+- `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
+- `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action of the players]
+- `verbosity``: an integer parameter to pass to the inner solver (currently Ipopt) [def: `0`]
 
 # Notes
-- This function uses a LCP (Linear Complementarity) formulation (for nplayers >3 the algorithm actually is not linear)
-- The implementation uses the JuMP modelling language with the Ipopt solver engine (and hence it uses an interior point method instead of the pivotal approach used in the original Lemke-Howson [1964] algorithm)
-- There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different equilibriums may be reached by setting different initial points 
+- This function uses a complementarity formulation. For N <= 2 the problem, except the complementarity equation, the problem is linear and known as LCP (Linear Complementarity Problem)
+- This implementation uses the JuMP modelling language with the Ipopt solver engine (and hence it uses an interior point method instead of the pivotal approach used in the original Lemke-Howson [1964] algorithm)
+- There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different Nash equilibriums may be reached by setting different initial points 
 
 # Returns
 - A named tuple with the following elements: `status`,`equilibrium_strategies`,`expected_payoffs`
@@ -155,7 +158,7 @@ julia> eq_strategies = eq.equilibrium_strategies
 function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=0)  
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
-    (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff tensor and the number of players")
+    (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
 
     # Vector of 2-elements tuples where the first one is the player index and the second one is the action index
     # We specify it as a vector of tuples as the number of actions can be different for the different players
@@ -223,9 +226,12 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
 end
 
 """
-    dominated_strategies(payoff,player;strict=true)
+    dominated_strategies(payoff,nplayer;strict=true)
 
-Return a vector with the positions of the actions for player `player` that are dominates by at least one of his other actions.
+Return a vector with the positions of the actions for player `nplayer` that are dominates by at least one of his other actions.
+
+# Notes
+- This function is available also as `dominated_strategies(payoff;strict=true)` returning a vector of vectors of dominated strategies for all players
 
 # Example
 ```julia
@@ -238,6 +244,9 @@ julia> payoff_array = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
 [:, :, 2] =
  4  5  2
  6  7  7
+ julia> dominated_strategies(payoff_array,2) 
+1-element Vector{Int64}:
+ 1
 julia> dominated_strategies(payoff_array,2,strict=false) 
 2-element Vector{Int64}:
  1
@@ -263,21 +272,25 @@ function dominated_strategies(payoff,player;strict=true)
     end
     return dominated 
 end
+function dominated_strategies(payoff;strict=true)
+    return [dominated_strategies(payoff,n,strict=strict) for n in 1:ndims(payoff)-1]
+end
 
 """
-    best_response(payoff_array,strategy_profile,player)
+    best_response(payoff_array,strategy_profile,nplayer)
 
-Return (possibly one of many) best strategy and corrsponding expected payoff for a given player
+Return (possibly one of many) best strategy and corrsponding expected payoff for a given player.
 
 # Parameters:
-- `payoff_array`: the nplayers+1 array of payoffs
-- `strategy_profile`: the vector of vectors defining the strategies for the N players. The strategy for player n for which the best response is looked is used as init value in the optimisation
-- `player`: counter of the player for which we want to compute the best_response (e.g. 1 or 3)
+- `payoff_array`: the N_players+1 dimensional array of payoffs
+- `strategy_profile`: the vector of vectors defining the strategies for the N players. The strategy for player n for which the best response is computed is used as initial values in the inner optimisation
+- `nplayer`: counter of the player for which we want to compute the best_response (e.g. 1 or 3)
 
 # Returns:
 - A named tuple with: `expected_payoff`, `optimal_strategy`, `status` (of the underlying optimisation)
 
 # Example:
+
 ```julia
 julia> using StrategicGames
 julia> payoff_array  = [(3,4) (1,5); (4,2) (2,3)] # prisoner's dilemma
@@ -286,7 +299,7 @@ julia> payoff_array  = [(3,4) (1,5); (4,2) (2,3)] # prisoner's dilemma
  (4, 2)  (2, 3)
 julia> best_response(expand_dimensions(payoff_array),[[0.5,0.5],[0.5,0.5]],2)
 (expected_payoff = 4.0, optimal_strategy = [0.0, 1.0], status = MathOptInterface.OPTIMAL)
-``
+```
 """
 function best_response(payoff,strategy_profile,player)
     nActions = size(payoff)[1:end-1]
@@ -310,16 +323,16 @@ function best_response(payoff,strategy_profile,player)
 end
 
 """
-    is_best_response(payoff_array,strategy_profile,player;atol=1e-07,rtol=1e-07)
+    is_best_response(payoff_array,strategy_profile,nplayer;atol=1e-07,rtol=1e-07)
 
-Determine if a given strategy for player `player` is the best response to a given strategy profile given a specific payoff matrix
+Determine if a given strategy for player `nplayer` is a best response to a given payoff array and strategies of the other players
 
 # Parameters:
-- `payoff_array`: the nplayers+1 array of payoffs
+- `payoff_array`: the Nplayers+1 dimensional array of payoffs
 - `strategy_profile`: the vector of vectors defining the strategies for the N players
-- `player`: counter of the player for which we want to verify if its strategy is a best_response (e.g. 1 or 3)
-- `atol`: absolute tollerance in comparing the expected utility from the given strategy and those from the optimal one [def: `1e-07`]
-- `rtol`: relative tollerance in comparing the expected utility from the given strategy and those from the optimal one [def: `1e-07`]
+- `nplayer`: counter of the player for which we want to verify if its strategy is a best_response (e.g. 1 or 3)
+- `atol`: absolute tollerance in comparing the expected payoff from the given strategy and those from the optimal one [def: `1e-07`]
+- `rtol`: relative tollerance in comparing the expected payoff from the given strategy and those from the optimal one [def: `1e-07`]
 
 # Example : 
 ```julia
@@ -343,13 +356,13 @@ end
 """
     is_nash(payoff_array,strategy_profile;atol=1e-07,rtol=1e-07)
 
-Determine if a strategy profile is a Nash equilibrium for a given payoff matrix, i.e. all strategies are (weak) best responses
+Determine if a strategy profile is a Nash equilibrium for a given payoff array, i.e. if all strategies are (at least weak) best responses.
 
 # Parameters:
-- `payoff_array`: the nplayers+1 array of payoffs
+- `payoff_array`: the Nplayers+1 array of payoffs
 - `strategy_profile`: the vector of vectors defining the strategies for the N players
-- `atol`: absolute tollerance in comparing the expected utility from the given strategies and those from the optimal ones [def: `1e-07`]
-- `rtol`: relative tollerance in comparing the expected utility from the given strategies and those from the optimal ones [def: `1e-07`]
+- `atol`: absolute tollerance in comparing the expected payoffs from the given strategies and those from the optimal ones [def: `1e-07`]
+- `rtol`: relative tollerance in comparing the expected payoffs from the given strategies and those from the optimal ones [def: `1e-07`]
 
 # Example : 
 ```julia

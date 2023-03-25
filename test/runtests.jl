@@ -1,5 +1,5 @@
 using Test, StrategicGames
-import StrategicGames: outer_product
+import StrategicGames: outer_product, expected_value
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
 payoff_array = expand_dimensions(payoff_tuple)
@@ -59,3 +59,4 @@ nash_u         = eq.expected_payoffs[2]
 
 @test is_nash(payoff,eq_strategies) == true
 
+        
