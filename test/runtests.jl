@@ -29,6 +29,8 @@ eq  = nash_cp(payoff_array)
 eq_strategies = eq.equilibrium_strategies
 p = -1 + sqrt(10)/2
 @test eq_strategies ≈ [[p,1-p],[p,1-p],[p,1-p]]
+is_nash(payoff_array,eq_strategies)
+
 
 # Testing dominated_strategies
 u = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
@@ -59,4 +61,18 @@ nash_u         = eq.expected_payoffs[2]
 
 @test is_nash(payoff,eq_strategies) == true
 
-        
+U = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ] # head, rock, scissor Only eq is [[0.33,0.33,0.33],[0.33,0.33,0.33]]
+payoff = expand_dimensions(U)
+@test nash_on_support(payoff,[[1,2,3],[1,2,3]]).solved == true
+@test nash_on_support(payoff,[[1,2],[1,2,3]]).solved == false
+
+U = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma. Only Nash eq is [[0,1],[0,1]]
+payoff = expand_dimensions(U)
+@test nash_on_support(payoff,[[1,2],[1,2]]).solved == false
+@test nash_on_support(payoff,[[1],[1]]).solved  == false
+@test nash_on_support(payoff,[[2],[2]]).solved  ==true
+
+payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma. Only Nash eq is [[0,1],[0,1]]
+payoff_array = expand_dimensions(payoff)
+nash_on_support(payoff_array,[[1,2],[1,2]]).solved # false
+nash_on_support(payoff_array,[[2],[2]]).solved     # true
