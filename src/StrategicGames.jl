@@ -10,7 +10,7 @@ A convenient function allows to transform a N-dimensional array of tuples (the p
 """
 module StrategicGames
 
-using LinearAlgebra, JuMP, Ipopt, GLPK, HiGHS
+using LinearAlgebra, Combinatorics, JuMP, Ipopt, GLPK, HiGHS
 
 export Verbosity, NONE, LOW, STD, HIGH, FULL
 export expand_dimensions
@@ -145,7 +145,7 @@ Find a Nash Equilibrium for N-players simultaneous games when mixed strategies a
 # Parameters
 - `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
 - `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action of the players]
-- `verbosity``: an integer parameter to pass to the inner solver (currently Ipopt) [def: `0`]
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
 - This function uses a complementarity formulation. For N <= 2 the problem, except the complementarity equation, the problem is linear and known as LCP (Linear Complementarity Problem)
@@ -188,7 +188,7 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
     end
 
     m = Model(Ipopt.Optimizer)
-    if Verbosity <= STD
+    if verbosity <= STD
         set_optimizer_attribute(m, "print_level", 0)
     end
 
@@ -219,7 +219,7 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
     @objective m Max sum(u[n] for n in 1:nPlayers)
 
     optimize!(m)
-    if Verbosity == FULL
+    if verbosity == FULL
         print(m)
     end
     status = termination_status(m)
@@ -304,6 +304,7 @@ Return (possibly one of many) best strategy and corrsponding expected payoff for
 - `strategy_profile`: the vector of vectors defining the strategies for the N players. The strategy for player n for which the best response is computed is used as initial values in the inner optimisation
 - `nplayer`: counter of the player for which we want to compute the best_response (e.g. 1 or 3)
 - `solver`: currently either "GLPK" or "HiGHS"
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Returns:
 - A named tuple with: `expected_payoff`, `optimal_strategy`, `status` (of the underlying optimisation)
@@ -320,7 +321,7 @@ julia> best_response(expand_dimensions(payoff_array),[[0.5,0.5],[0.5,0.5]],2)
 (expected_payoff = 4.0, optimal_strategy = [0.0, 1.0], status = MathOptInterface.OPTIMAL)
 ```
 """
-function best_response(payoff,strategy_profile,player;solver="GLPK")
+function best_response(payoff,strategy_profile,player;solver="GLPK",verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     payoff_n = selectdim(payoff,nPlayers+1,player)
@@ -339,14 +340,16 @@ function best_response(payoff,strategy_profile,player;solver="GLPK")
         [*(payoff_n[idx],[strategy_profile[n][idx[n]] for n in [1:player-1;player+1:nPlayers]]...,s[idx[player]]) for idx in CartesianIndices(nActions)]  
     )
     optimize!(m)
-    #print(m)
+    if verbosity == FULL
+        print(m)
+    end
     status = termination_status(m)
     
     return (expected_payoff=objective_value(m), optimal_strategy=value.(s), status=status)
 end
 
 """
-    is_best_response(payoff_array,strategy_profile,nplayer;atol=1e-07,rtol=1e-07,solver)
+    is_best_response(payoff_array,strategy_profile,nplayer;atol=1e-07,rtol=1e-07,solver,verbosity=STD)
 
 Determine if a given strategy for player `nplayer` is a best response to a given payoff array and strategies of the other players
 
@@ -357,6 +360,7 @@ Determine if a given strategy for player `nplayer` is a best response to a given
 - `atol`: absolute tollerance in comparing the expected payoff from the given strategy and those from the optimal one [def: `1e-07`]
 - `rtol`: relative tollerance in comparing the expected payoff from the given strategy and those from the optimal one [def: `1e-07`]
 - `solver`: currently either "GLPK" or "HiGHS"
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Example : 
 ```julia
@@ -371,14 +375,14 @@ julia> is_best_response(expand_dimensions(payoff_array),[[0,1],[0.5,0.5]],2)
 false
 ```
 """
-function is_best_response(payoff,strategy_profile,player;atol=1e-07,rtol=1e-07,solver="GLPK")
-    best_u = best_response(payoff,strategy_profile,player,solver=solver).expected_payoff
+function is_best_response(payoff,strategy_profile,player;atol=1e-07,rtol=1e-07,solver="GLPK",verbosity=STD)
+    best_u = best_response(payoff,strategy_profile,player,solver=solver,verbosity=verbosity).expected_payoff
     this_u = expected_payoff(payoff,strategy_profile,player)
     return isapprox(this_u,best_u,atol=atol,rtol=rtol)
 end
 
 """
-    is_nash(payoff_array,strategy_profile;atol=1e-07,rtol=1e-07,solver)
+    is_nash(payoff_array,strategy_profile;atol=1e-07,rtol=1e-07,solver,verbosity)
 
 Determine if a strategy profile is a Nash equilibrium for a given payoff array, i.e. if all strategies are (at least weak) best responses.
 
@@ -388,6 +392,7 @@ Determine if a strategy profile is a Nash equilibrium for a given payoff array, 
 - `atol`: absolute tollerance in comparing the expected payoffs from the given strategies and those from the optimal ones [def: `1e-07`]
 - `rtol`: relative tollerance in comparing the expected payoffs from the given strategies and those from the optimal ones [def: `1e-07`]
 - `solver`: currently either "GLPK" or "HiGHS"
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Example : 
 ```julia
@@ -400,8 +405,8 @@ julia> is_nash(expand_dimensions(payoff_array),[[0,1],[0,1]])
 true
 ```
 """
-function is_nash(payoff,strategy_profile;atol=1e-07,rtol=1e-07,solver="GLPK")
-    all([isapprox( best_response(payoff,strategy_profile,i,solver=solver).expected_payoff,
+function is_nash(payoff,strategy_profile;atol=1e-07,rtol=1e-07,solver="GLPK",verbosity=STD)
+    all([isapprox( best_response(payoff,strategy_profile,i,solver=solver,verbosity=verbosity).expected_payoff,
                    expected_payoff(payoff,strategy_profile,i),
                    atol=atol,rtol=rtol) for i in 1:ndims(payoff)-1])
 end
@@ -415,7 +420,7 @@ Find (if it exists) a Nash equilibrium for N-players simultaneous games when mix
 - `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
 - `support`: vector of vector of action counts that are in the tested support for each player [def: full support]
 - `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action of the players]
-- `verbosity``: an integer parameter to pass to the inner solver (currently Ipopt) [def: `0`]
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
 - This implementation uses the JuMP modelling language with the Ipopt solver engine
@@ -437,7 +442,7 @@ julia> nash_on_support(payoff_array,[[2],[2]]).solved     # true
 true
 ```
 """
-function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]));verbosity=0)  
+function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]));verbosity=STD)  
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
@@ -483,7 +488,10 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     end
 
     m = Model(Ipopt.Optimizer)
-    set_optimizer_attribute(m, "print_level", verbosity)
+    if verbosity <= STD
+        set_optimizer_attribute(m, "print_level", 0)
+    end
+ 
     @variables m begin
         u[n in 1:nPlayers]
     end
@@ -510,8 +518,9 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     end
 
     @objective m Max sum(u[n] for n in 1:nPlayers)
-
-    #print(m)
+    if verbosity == FULL
+        print(m)
+    end
     optimize!(m)
     status = termination_status(m)
 
@@ -536,12 +545,59 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     elseif (status in [MOI.LOCALLY_INFEASIBLE, MOI.INFEASIBLE, MOI.ALMOST_DUAL_INFEASIBLE, MOI.ALMOST_DUAL_INFEASIBLE,MOI.INFEASIBLE_OR_UNBOUNDED, MOI.DUAL_INFEASIBLE])
         solved = false
     else
-        if Verbosity >= STD
+        if verbosity >= STD
             warning("The feasibility check for support $support returned neither solved neither unsolved ($status). Returning no Nash equilibrium for this support.")
         end
         solved = false
     end
     return (status=status,equilibrium_strategies=optStrategies,expected_payoffs=optU,solved)
+end
+
+function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
+    nActions = size(payoff)[1:end-1]
+    nPlayers = size(payoff)[end]
+    nPlayers == 2 || error("This function works only for 2 players games")
+    nSupportSizes = allow_mixed ? prod(nActions) : 1
+    eqs = NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}[]
+
+    support_sizes = Matrix{Union{Int64,NTuple{nPlayers,Int64}}}(undef,nSupportSizes,3) # sum, diff, support sizes
+
+    if allow_mixed
+        i = 1
+        for idx in CartesianIndices(nActions)
+            support_sizes[i,:] = [sum(Tuple(idx)),maximum(Tuple(idx))-minimum(Tuple(idx)),Tuple(idx)] 
+            i += 1
+        end
+    else
+        support_sizes[1,:] = [nPlayers,0,(ones(Int64,nPlayers)...,)]
+    end
+    if nPlayers <= 2
+        support_sizes = sortslices(support_sizes,dims=1,by=x->(x[2],x[1]))
+    else
+        support_sizes = sortslices(support_sizes,dims=1,by=x->(x[1],x[2]))
+    end   
+
+    for support_size in eachrow(support_sizes)
+        for S1 in combinations(1:nActions[1],support_size[3][1])
+            A2 = setdiff(1:nActions[2],dominated_strategies(payoff[S1,:,:],2))
+            if !isempty(dominated_strategies(payoff[S1,A2,:],1))
+                continue
+            end
+            for S2 in combinations(A2,support_size[3][2])
+                if !isempty(dominated_strategies(payoff[S1,S2,:],1))
+                        continue
+                end
+                eq_test =  nash_on_support(payoff,[S1,S2],verbosity=verbosity)
+                if eq_test.solved
+                        push!(eqs,(equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=[S1,S2]))
+                        if length(eqs) == max_samples
+                            return eqs
+                        end
+                end
+            end
+        end 
+    end
+    return eqs
 end
 
 end # module StrategicGames

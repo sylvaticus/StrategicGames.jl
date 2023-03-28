@@ -1,5 +1,5 @@
 using Test, StrategicGames
-import StrategicGames: outer_product, expected_value
+import StrategicGames: outer_product, expected_value, nash_se2
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
 payoff_array = expand_dimensions(payoff_tuple)
@@ -72,7 +72,21 @@ payoff = expand_dimensions(U)
 @test nash_on_support(payoff,[[1],[1]]).solved  == false
 @test nash_on_support(payoff,[[2],[2]]).solved  ==true
 
-payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma. Only Nash eq is [[0,1],[0,1]]
-payoff_array = expand_dimensions(payoff)
-nash_on_support(payoff_array,[[1,2],[1,2]]).solved # false
-nash_on_support(payoff_array,[[2],[2]]).solved     # true
+
+#=
+# ----------------------------------------------------------------
+u = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ]
+payoff   = expand_dimensions(u)
+eq = nash_se2(payoff,max_samples=Inf)
+u = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
+payoff=(expand_dimensions(u))
+eq = nash_se2(payoff,max_samples=Inf,allow_mixed=false)
+u = [(1,-1) (-1,1); (-1,1) (1, -1)]
+payoff=(expand_dimensions(u))
+eq = nash_se2(payoff,max_samples=Inf)
+u = [(2,1) (0,0); (0,0) (1,2)]
+payoff=(expand_dimensions(u))
+eq = nash_se2(payoff,max_samples=Inf)
+
+is_nash(payoff,eq[1].equilibrium_strategies)
+=#
