@@ -140,17 +140,19 @@ end
 """
     nash_cp(payoff_array;init,verbosity)
 
-Find a Nash Equilibrium for N-players simultaneous games when mixed strategies are allowed using the Complementarity Problem formulation.
+Find a Nash Equilibrium for N-players simultaneous games when mixed strategies are allowed using the Complementarity Problem formulation and implementing iterated removal of dominated strategies
 
 # Parameters
 - `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
 - `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action of the players]
+- `strict_domination_removal`: wether to remove only strictly dominated strategies in the pre-optimisation or also weakly dominated ones [def: `true`]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
-- This function uses a complementarity formulation. For N <= 2 the problem, except the complementarity equation, the problem is linear and known as LCP (Linear Complementarity Problem)
+- This function uses a complementarity formulation. For N <= 2 the problem, except the complementarity equation, is linear and known as LCP (Linear Complementarity Problem)
 - This implementation uses the JuMP modelling language with the Ipopt solver engine (and hence it uses an interior point method instead of the pivotal approach used in the original Lemke-Howson [1964] algorithm)
-- There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different Nash equilibriums may be reached by setting different initial points 
+- There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different Nash equilibriums may be reached by setting different initial points
+- By default the iterative removal of dominated strategies concerns only _strictly_ dominated ones. For some games where the algorithm doesn't find a Nash equilibrium, you can often get success setting the algorithm to remove also weakly dominated strategies. 
 
 # Returns
 - A named tuple with the following elements: `status`,`equilibrium_strategies`,`expected_payoffs`
@@ -169,10 +171,12 @@ julia> eq_strategies = eq.equilibrium_strategies
  [-4.0497525691839856e-11, 1.0000000000404976]
 ```
 """
-function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=STD)  
+function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=STD,ϵ=0.0,strict_domination_removal=true)  
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
+
+    dominated = dominated_strategies(payoff,strict=strict_domination_removal)
 
     # Vector of 2-elements tuples where the first one is the player index and the second one is the action index
     # We specify it as a vector of tuples as the number of actions can be different for the different players
@@ -193,10 +197,17 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
     end
 
     @variables m begin
-        r[idx in idxSet ] >= 0
+        r[idx in idxSet ] >= 0-ϵ
         u[n in 1:nPlayers]
     end
-    @variable(m, 0 <= s[idx in idxSet ] <= 1,  start=init[idx[1]][idx[2]])
+    @variable(m, 0-ϵ <= s[idx in idxSet ] <= 1+ϵ,  start=init[idx[1]][idx[2]])
+
+    for n in 1:nPlayers
+        for ds in dominated[n] 
+            fix(s[(n,ds)], 0.0; force=true);
+        end
+    end
+
     @constraints m begin
         slack[idx in idxSet], # either rₙⱼ or sₙⱼ must be zero
             r[idx] * s[idx] == 0
@@ -206,17 +217,19 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
                 * prod(s[sidx] for sidx in zip(collect(1:nPlayers)[[1:idx[1]-1;idx[1]+1:end]], Tuple(cidx)) )
                 for cidx in CartesianIndices(([nActions...][[1:idx[1]-1;idx[1]+1:end]]...,))
             ) +   r[idx] == u[idx[1]]
-        probabilities[n in 1:nPlayers],
-            sum(s[j] for j in idxSet[setPosByPlayerIdx[n]]) == 1
+        probabilities_lb[n in 1:nPlayers],
+            sum(s[j] for j in idxSet[setPosByPlayerIdx[n]]) >= 1-ϵ
+        probabilities_ub[n in 1:nPlayers],
+            sum(s[j] for j in idxSet[setPosByPlayerIdx[n]]) <= 1+ϵ            
     end
 
     if !allow_mixed
         @NLconstraint(m, pure_only[n in 1:nPlayers], # if we want only pure strategies we add this quadratic constraint to force boolean probabilities
-            sum(s[j]^2 for j in idxSet[setPosByPlayerIdx[n]]) >= 1-0.00000001
+            sum(s[j]^2 for j in idxSet[setPosByPlayerIdx[n]]) >= 1-ϵ
         )
     end
 
-    @objective m Max sum(u[n] for n in 1:nPlayers)
+    @objective m Max 1;sum(u[n] for n in 1:nPlayers)
 
     optimize!(m)
     if verbosity == FULL
@@ -244,54 +257,94 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
 end
 
 """
-    dominated_strategies(payoff,nplayer;strict=true)
+    dominated_strategies(payoff;strict=true,iterated=true,verbosity,dominated)
 
-Return a vector with the positions of the actions for player `nplayer` that are dominates by at least one of his other actions.
+Implements the "Iterated [by default] Removal of Strictly [by default] Dominated Strategies" (IRSDS) algorithm, returning a vector (for each player) of vectors (action positions) of actions that for a given player are dominates by at least one of his other actions. This function is iterative (recursive) by default.
+
+# Parameters
+- `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
+- `strict`: wheter to look for strictly dominated actions [def: `true`]
+- `iterated`: wheter to look for strictly dominated actions iteractively [def: `true`]
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
+- `dominated`: vector of vectors of actions to skip check as already deemed as dominated
 
 # Notes
-- This function is available also as `dominated_strategies(payoff;strict=true)` returning a vector of vectors of dominated strategies for all players
+- This function is available also as `dominated_strategies(payoff,player;strict)` returning a vector of dominated strategies for a given players (computed not iteractively)
+- To get the list of retrieved dominated actions at each iteration, use a verbosity level higher than `STD` 
 
 # Example
 ```julia
 julia> using StrategicGames
-julia> payoff_array = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
-2×3×2 Array{Int64, 3}:
-[:, :, 1] =
- 3  1  6
- 2  3  1
-[:, :, 2] =
- 4  5  2
- 6  7  7
- julia> dominated_strategies(payoff_array,2) 
+julia> payoff = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
+3×3 Matrix{Tuple{Int64, Int64}}:
+ (13, 3)  (1, 4)  (7, 3)
+ (4, 1)   (3, 3)  (6, 2)
+ (-1, 9)  (2, 8)  (8, -1)
+julia> payoff_array = expand_dimensions(payoff);
+julia> dominated_player2 = dominated_strategies(payoff_array,2)
 1-element Vector{Int64}:
- 1
-julia> dominated_strategies(payoff_array,2,strict=false) 
-2-element Vector{Int64}:
- 1
  3
+julia> dominated = dominated_strategies(payoff_array,verbosity=HIGH)
+Dominated strategies at step 1: [Int64[], [3]]
+Dominated strategies at step 2: [[3], [3]]
+Dominated strategies at step 3: [[3], [3, 1]]
+Dominated strategies at step 4: [[3, 1], [3, 1]]
+Dominated strategies at step 5: [[3, 1], [3, 1]]
+2-element Vector{Vector{Int64}}:
+ [3, 1]
+ [3, 1]
 ```
 """
-function dominated_strategies(payoff,player;strict=true)
+function dominated_strategies(payoff;strict=true,iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],verbosity=STD,iteration=1)
+    #(! strict) && iterated && error("Iterated procedure is only compatible with strict dominated strategies detection. If you want to include weack dominated strategies detection select `iterated=false`")
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
-    payoff_n = selectdim(payoff,nPlayers+1,player)
-    dominated = Int64[]
-    for i in 1:nActions[player]
-        ai = selectdim(payoff_n,player,i) # action to test 
-        for j in 1:nActions[player]
-            i != j || continue
-            aj = selectdim(payoff_n,player,j)           
-            check_dominated = strict ? aj .> ai : aj .>= ai
-            if all(check_dominated)
-                push!(dominated,i)
-                break
-            end 
-        end
+    new_dominated = false
+    mask = fill(true,size(payoff))
+    for n in 1:nPlayers
+        selectdim(mask,n,dominated[n]) .= false
     end
-    return dominated 
+    #println(mask)
+    
+    for n in 1:nPlayers
+        payoff_n = selectdim(payoff,nPlayers+1,n)
+        mask_n   = selectdim(mask,nPlayers+1,n)
+        dominated_n = dominated[n]
+        #println(payoff_n)
+        #println(mask_n)
+        #println(dominated_n)
+        for i in 1:nActions[n]
+            i in dominated_n && continue # we don't check this action, it is already deemed as dominated
+            ai = selectdim(payoff_n,n,i) # action to test 
+            maski = .! selectdim(mask_n,n,i)
+            for j in 1:nActions[n]
+                i != j || continue
+                maskj = .! selectdim(mask_n,n,j)
+                j in dominated_n && continue # we don't check this action, it is already deemed as dominated
+                maski == maskj || error("Maski should always be equal to maskj!\n$maski \n$maskj")
+                aj = selectdim(payoff_n,n,j)           
+                check_dominated = strict ? ( (aj .> ai) .|| maski ) : (aj .>= ai .|| maski )
+                if all(check_dominated)
+                    push!(dominated_n,i)
+                    new_dominated = true
+                    break
+                end 
+            end
+        end
+        #dominated[n] = dominated_n # maybe not even needed 
+        sort!(dominated_n) # not really needed but nice to have them in order
+    end
+    if verbosity > STD
+        println("Dominated strategies at step $iteration: $dominated")
+    end
+    if (new_dominated && iterated)
+        return dominated_strategies(payoff,strict=true,iterated=true,dominated=dominated,verbosity=verbosity,iteration=iteration+1)
+    else
+        return dominated
+    end
 end
-function dominated_strategies(payoff;strict=true)
-    return [dominated_strategies(payoff,n,strict=strict) for n in 1:ndims(payoff)-1]
+function dominated_strategies(payoff,player;strict=true)
+    return dominated_strategies(payoff;strict=strict,iterated=false)[player]
 end
 
 """

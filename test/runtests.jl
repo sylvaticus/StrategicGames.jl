@@ -36,17 +36,32 @@ is_nash(payoff_array,eq_strategies)
 u = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
 @test dominated_strategies(u,2,strict=true) == [1]
 @test dominated_strategies(u,2,strict=false) == [1,3]
-
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
-     (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
+     (4,6,4) (2,7,6) (4,2,4); (3,7,2) (4,5,2) (0,4,3);;;]
 payoff = expand_dimensions(u)
 @test dominated_strategies(payoff,2,strict=false) == [3]
+@test dominated_strategies(payoff,strict=false,iterated=false) == [[],[3],[1]]
 
+@test dominated_strategies(payoff,strict=true,iterated=true) == [[],[3],[1]]
 
+# from https://www.youtube.com/watch?v=Pp5cF4RWuU0 :
+u = [(13.0,3.0) (1.0,4.0) (7.0,3.0); (4.0,1.0) (3.0,3.0) (6.0,2.0); (-1.0,9.0) (2.0,8.0) (8.0,-1.0)]
+payoff = expand_dimensions(u)
+@test dominated_strategies(payoff,strict=true,iterated=true) == [[1,3],[1,3]] 
+
+# from https://www.youtube.com/watch?v=ErJNYh8ejSA : 
+u = [(1,1) (-1,2) (5,0) (1,1);
+     (2,3) ( 1,2) (3,0) (5,1);
+     (1,1) ( 0,5) (1,7) (0,1)]
+payoff = expand_dimensions(u)
+@test dominated_strategies(payoff) == [[1,3],[2,3,4]]
 #=
 # TODO: check why nash_cp() doesn't work with this one:
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
      (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
+# also this one: 
+u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
+# check with iterated removal of strictly dominated strategies
 =#
 u = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
      (3,3,3)  ; (2,4,2)  ;; (4,2,2) ; (1,1,1)  ;;;]
@@ -56,10 +71,18 @@ eq_strategies = eq.equilibrium_strategies
 opt_u         = best_response(payoff,[eq_strategies[1],[0.33,0.33,0.34],eq_strategies[3]],2).expected_payoff
 nash_u         = eq.expected_payoffs[2]
 @test isapprox(opt_u,nash_u)
-
 @test is_best_response(payoff,eq_strategies,2)
-
 @test is_nash(payoff,eq_strategies) == true
+u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
+     (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
+payoff        = expand_dimensions(u)
+eq            = nash_cp(payoff,strict_domination_removal=false)
+@test is_nash(payoff,eq.equilibrium_strategies) == true
+
+u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
+payoff        = expand_dimensions(u)
+eq            = nash_cp(payoff)
+@test is_nash(payoff,eq.equilibrium_strategies) == true
 
 U = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ] # head, rock, scissor Only eq is [[0.33,0.33,0.33],[0.33,0.33,0.33]]
 payoff = expand_dimensions(U)
@@ -89,4 +112,12 @@ payoff=(expand_dimensions(u))
 eq = nash_se2(payoff,max_samples=Inf)
 
 is_nash(payoff,eq[1].equilibrium_strategies)
+=#
+
+#=
+u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
+payoff = expand_dimensions(u) 
+eq = nash_cp(payoff,ϵ=0.1)
+eq = nash_se2(payoff)
+is_nash(payoff,[[0,1,0],[0,1,0]])
 =#
