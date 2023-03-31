@@ -48,4 +48,17 @@ julia> # Is this strategy profile a Nash equilibrium ?
 false
 ```
 
+ ## Other game-theory libraries
+
+**Julia**
+ - **[Nash.jl](https://github.com/KrainskiL/Nash.jl)** Has several functions to generate games in normal form, determine best response and if a strategy profile is a Nash Equilibrium (NE) but it doesn't provide a functionality to retrieve a NE, except for 2 players simmetric games 
+ - **[GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)** Inter alia, compute N-players pure strategy NE, 2-players mixed strategy games (`lrsnash`, using exact arithmetics) and N-players mixed strategies NE using a solver of the polynomial equation representation of the complementarity conditions (`hc_solve`). However this "generic" N-player solver become easilty intractable (we tried a 10x10 actions game).
+
+**Non-Julia**
+ - [Nashpy](https://github.com/drvinceknight/Nashpy): two players only
+ - [Gambit](http://www.gambit-project.org/)
+ - [Sage Math]()
+ - [GtNash](https://forgemia.inra.fr/game-theory-tools-group/gtnash/-/tree/main/)
+
+
 

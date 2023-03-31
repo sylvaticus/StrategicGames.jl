@@ -14,9 +14,10 @@ using LinearAlgebra, Combinatorics, JuMP, Ipopt, GLPK, HiGHS
 
 export Verbosity, NONE, LOW, STD, HIGH, FULL
 export expand_dimensions
-export expected_payoff, nash_cp
+export expected_payoff
 export dominated_strategies, best_response, is_best_response, is_nash
 export nash_on_support
+export nash_cp, nash_se
 
 
 """
@@ -257,19 +258,22 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
 end
 
 """
-    dominated_strategies(payoff;strict=true,iterated=true,verbosity,dominated)
+    dominated_strategies(payoff;strict=true,iterated=true,dominated,support,verbosity)
 
 Implements the "Iterated [by default] Removal of Strictly [by default] Dominated Strategies" (IRSDS) algorithm, returning a vector (for each player) of vectors (action positions) of actions that for a given player are dominates by at least one of his other actions. This function is iterative (recursive) by default.
 
 # Parameters
 - `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
 - `strict`: wheter to look for strictly dominated actions [def: `true`]
-- `iterated`: wheter to look for strictly dominated actions iteractively [def: `true`]
-- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
+- `iterated`: wheter to look for dominated actions iteractively [def: `true`]
 - `dominated`: vector of vectors of actions to skip check as already deemed as dominated
+- `support`: support profile to consider (vector of vectors, see notes). Default all actions
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
+
 
 # Notes
 - This function is available also as `dominated_strategies(payoff,player;strict)` returning a vector of dominated strategies for a given players (computed not iteractively)
+- Whae a particolar support is specified, the function looks for dominated strategies within the support for a given player, but considering also for possibly dominating actions outside its support. In both cases only the actions in the supports of the other players are considered.
 - To get the list of retrieved dominated actions at each iteration, use a verbosity level higher than `STD` 
 
 # Example
@@ -295,35 +299,44 @@ Dominated strategies at step 5: [[3, 1], [3, 1]]
  [3, 1]
 ```
 """
-function dominated_strategies(payoff;strict=true,iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],verbosity=STD,iteration=1)
-    #(! strict) && iterated && error("Iterated procedure is only compatible with strict dominated strategies detection. If you want to include weack dominated strategies detection select `iterated=false`")
+function dominated_strategies(payoff;strict=true,iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],support=[1:nA for nA in size(payoff)[1:end-1]],verbosity=STD,iteration=1)
+
+    #println(support)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     new_dominated = false
-    mask = fill(true,size(payoff))
+    mask  = fill(true,size(payoff))
+    mask_support = fill(false,size(payoff))
     for n in 1:nPlayers
         selectdim(mask,n,dominated[n]) .= false
     end
+    mask_support[support...,:] .= true
     #println(mask)
     
     for n in 1:nPlayers
-        payoff_n = selectdim(payoff,nPlayers+1,n)
-        mask_n   = selectdim(mask,nPlayers+1,n)
-        dominated_n = dominated[n]
+        payoff_n        = selectdim(payoff,nPlayers+1,n)
+        mask_n          = selectdim(mask,nPlayers+1,n)
+        mask_support_n  = selectdim(mask_support,nPlayers+1,n)
+        dominated_n     = dominated[n]
+        #println(mask_support_n)
         #println(payoff_n)
         #println(mask_n)
         #println(dominated_n)
-        for i in 1:nActions[n]
+        for i in support[n] # we check only actions in the support
+            #println("i: $i")
             i in dominated_n && continue # we don't check this action, it is already deemed as dominated
             ai = selectdim(payoff_n,n,i) # action to test 
-            maski = .! selectdim(mask_n,n,i)
-            for j in 1:nActions[n]
+            maski         = .! selectdim(mask_n,n,i)
+            maski_support = .! selectdim(mask_support_n,n,i)
+            for j in 1:nActions[n] # we check for any possible dominating action, even outside support
+                #println("j: $j")
                 i != j || continue
-                maskj = .! selectdim(mask_n,n,j)
+                maskj         = .! selectdim(mask_n,n,j)
+                #maskj_support =  selectdim(mask_support_n,n,j) # as this action to check may be outside support, maskj_support could be all false
                 j in dominated_n && continue # we don't check this action, it is already deemed as dominated
                 maski == maskj || error("Maski should always be equal to maskj!\n$maski \n$maskj")
                 aj = selectdim(payoff_n,n,j)           
-                check_dominated = strict ? ( (aj .> ai) .|| maski ) : (aj .>= ai .|| maski )
+                check_dominated = strict ? ( (aj .> ai) .|| maski .|| maski_support ) : (aj .>= ai .|| maski .|| maski) # we don't care if action j is not higher than action i for other player actions that are dominated or not in the support
                 if all(check_dominated)
                     push!(dominated_n,i)
                     new_dominated = true
@@ -338,13 +351,13 @@ function dominated_strategies(payoff;strict=true,iterated=true,dominated=[Int64[
         println("Dominated strategies at step $iteration: $dominated")
     end
     if (new_dominated && iterated)
-        return dominated_strategies(payoff,strict=true,iterated=true,dominated=dominated,verbosity=verbosity,iteration=iteration+1)
+        return dominated_strategies(payoff,strict=strict,iterated=true,dominated=dominated,support=support,verbosity=verbosity,iteration=iteration+1)
     else
         return dominated
     end
 end
-function dominated_strategies(payoff,player;strict=true)
-    return dominated_strategies(payoff;strict=strict,iterated=false)[player]
+function dominated_strategies(payoff,player;support=[1:nA for nA in size(payoff)[1:end-1]],strict=true)
+    return dominated_strategies(payoff;strict=strict,support=support,iterated=false)[player]
 end
 
 """
@@ -496,6 +509,7 @@ true
 ```
 """
 function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]));verbosity=STD)  
+    verbosity == FULL && println(support)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
@@ -511,7 +525,7 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     # We specify it as a vector of tuples as the number of actions can be different for the different players
     # Here we create 3 versions: full (check if needed), in support, and not in support
     idxSet  = Vector{Tuple{Int64,Int64}}()
-    idxSet1 = Vector{Tuple{Int64,Int64}}() # index of cobinations in support
+    idxSet1 = Vector{Tuple{Int64,Int64}}() # index of combinations in support
     idxSet0 = Vector{Tuple{Int64,Int64}}() # index of combinations out of support
     setPosByPlayerIdx = Vector{Vector{Int64}}()
     setPosByPlayerIdx1 = Vector{Vector{Int64}}()
@@ -540,6 +554,11 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
         push!(setPosByPlayerIdx0,setPosByPlayerIdx0_n)
     end
 
+    
+    #println("idxSet: \n$idxSet")
+    #println("idxSet0: \n$idxSet0")
+    #println("idxSet1: \n$idxSet1")
+
     m = Model(Ipopt.Optimizer)
     if verbosity <= STD
         set_optimizer_attribute(m, "print_level", 0)
@@ -554,10 +573,11 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     end
 
     @constraints m begin
+        
         utility1[idx in idxSet1], # the expected utility for each action in the support must be constant, for each nPlayers
             sum(   
                 selectdim(selectdim(payoff,nPlayers+1,idx[1]),idx[1],idx[2])[cidx]
-                * prod(s[sidx] for sidx in zip(collect(1:nPlayers)[[1:idx[1]-1;idx[1]+1:end]], Tuple(cidx))   )
+                 * prod(s[sidx] for sidx in zip(collect(1:nPlayers)[[1:idx[1]-1;idx[1]+1:end]], Tuple(cidx))   )
                 for cidx in CartesianIndices(([nActions...][[1:idx[1]-1;idx[1]+1:end]]...,)) 
             )  == u[idx[1]]
         utility0[idx in idxSet0], # the expected utility for each action not in the support must be constant, for each nPlayers
@@ -565,7 +585,8 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
                 selectdim(selectdim(payoff,nPlayers+1,idx[1]),idx[1],idx[2])[cidx]
                 * prod(s[sidx] for sidx in zip(collect(1:nPlayers)[[1:idx[1]-1;idx[1]+1:end]], Tuple(cidx)) )
                 for cidx in CartesianIndices(([nActions...][[1:idx[1]-1;idx[1]+1:end]]...,)) #if Tuple(cidx) in idxSet1
-            ) <= u[idx[1]]         
+            ) <= u[idx[1]]      
+      
         probabilities[n in 1:nPlayers],
             sum(s[j] for j in idxSet1[setPosByPlayerIdx1[n]]) == 1
     end
@@ -599,7 +620,7 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
         solved = false
     else
         if verbosity >= STD
-            warning("The feasibility check for support $support returned neither solved neither unsolved ($status). Returning no Nash equilibrium for this support.")
+            warn("The feasibility check for support $support returned neither solved neither unsolved ($status). Returning no Nash equilibrium for this support.")
         end
         solved = false
     end
@@ -649,6 +670,51 @@ function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
                 end
             end
         end 
+    end
+    return eqs
+end
+
+function nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
+    nActions = size(payoff)[1:end-1]
+    nPlayers = size(payoff)[end]
+    nSupportSizes = allow_mixed ? prod(nActions) : 1
+    eqs = NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}[]
+
+    support_sizes = Matrix{Union{Int64,NTuple{nPlayers,Int64}}}(undef,nSupportSizes,3) # sum, diff, support sizes
+
+    if allow_mixed
+        i = 1
+        for idx in CartesianIndices(nActions)
+            support_sizes[i,:] = [sum(Tuple(idx)),maximum(Tuple(idx))-minimum(Tuple(idx)),Tuple(idx)] 
+            i += 1
+        end
+    else
+        support_sizes[1,:] = [nPlayers,0,(ones(Int64,nPlayers)...,)]
+    end
+    if nPlayers <= 2
+        support_sizes = sortslices(support_sizes,dims=1,by=x->(x[2],x[1]))
+    else
+        support_sizes = sortslices(support_sizes,dims=1,by=x->(x[1],x[2]))
+    end   
+
+    for support_size in eachrow(support_sizes)
+        support_size = support_size[3]   
+        D = [combinations(1:nActions[n],support_size[n]) for n in 1:nPlayers]
+        for idx in CartesianIndices((length.(D)...,))
+            #println(idx)
+            S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
+            #println(S)
+            if all(isempty.(dominated_strategies(payoff,iterated=false,support=S)))
+                eq_test = nash_on_support(payoff,S,verbosity=verbosity)
+                if eq_test.solved
+                    eq = (equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=S)
+                    push!(eqs,eq)
+                    if length(eqs) == max_samples
+                        return eqs
+                    end
+                end
+            end
+        end
     end
     return eqs
 end

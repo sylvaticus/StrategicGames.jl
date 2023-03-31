@@ -167,12 +167,3 @@ julia> eq_strategies = eq.equilibrium_strategies
  [0.33333333333337, 0.6666666666666301]
 ```
 
- ## Other game-theory libraries
-
-**Julia**
- - [Nash.jl](https://github.com/KrainskiL/Nash.jl)
- - [GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)
-
-**Non-Julia**
- - [Nashpy](https://github.com/drvinceknight/Nashpy): two players only
- - [Gambit](http://www.gambit-project.org/)

@@ -54,7 +54,15 @@ u = [(1,1) (-1,2) (5,0) (1,1);
      (2,3) ( 1,2) (3,0) (5,1);
      (1,1) ( 0,5) (1,7) (0,1)]
 payoff = expand_dimensions(u)
-@test dominated_strategies(payoff) == [[1,3],[2,3,4]]
+
+@test dominated_strategies(payoff,iterated=false)                           == [[3],[4]]
+@test dominated_strategies(payoff)                                          == [[1,3],[2,3,4]]
+@test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,3,4]]) == [[3],[4]] # p2.a4 remains dominated by p2.a.2 even if it is not in the support 
+@test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,2,3]]) == [[3],[]] # p2.a4 is not checked for domination as not inthe support
+@test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,2,4]]) == [[1,3],[4]]# without p2.a3 also p1.a1 become dominated
+@test dominated_strategies(payoff,support=[[1,2,3],[1,2,4]])                == [[1,3],[2,4]]# p2.a3 not deemed as dominated in inner loops as not in the domain
+
+
 #=
 # TODO: check why nash_cp() doesn't work with this one:
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
@@ -95,25 +103,34 @@ payoff = expand_dimensions(U)
 @test nash_on_support(payoff,[[1],[1]]).solved  == false
 @test nash_on_support(payoff,[[2],[2]]).solved  ==true
 
-
 #=
+
 # ----------------------------------------------------------------
 u = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ]
 payoff   = expand_dimensions(u)
 eq = nash_se2(payoff,max_samples=Inf)
+eq = nash_se(payoff,max_samples=Inf)
 u = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
 payoff=(expand_dimensions(u))
 eq = nash_se2(payoff,max_samples=Inf,allow_mixed=false)
+eq = nash_se(payoff,max_samples=Inf,allow_mixed=false)
 u = [(1,-1) (-1,1); (-1,1) (1, -1)]
 payoff=(expand_dimensions(u))
 eq = nash_se2(payoff,max_samples=Inf)
+eq = nash_se(payoff,max_samples=Inf)
 u = [(2,1) (0,0); (0,0) (1,2)]
 payoff=(expand_dimensions(u))
 eq = nash_se2(payoff,max_samples=Inf)
-
+eq = nash_se(payoff,max_samples=Inf)
 is_nash(payoff,eq[1].equilibrium_strategies)
-=#
 
+payoff = rand(2,2,2,2,2,5)
+payoff = rand(2,2,3,2,4)
+dominated_strategies(payoff)
+eq = nash_se(payoff)
+nash_on_support(payoff,[[2],[2],[2],[2]], verbosity=FULL)
+
+=#
 #=
 u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
 payoff = expand_dimensions(u) 
