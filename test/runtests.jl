@@ -138,3 +138,8 @@ eq = nash_cp(payoff,ϵ=0.1)
 eq = nash_se2(payoff)
 is_nash(payoff,[[0,1,0],[0,1,0]])
 =#
+
+payoff = rand(4,4,4,3)
+dominated_strategies(payoff)
+eq = nash_se(payoff)
+nash_on_support(payoff,[[2],[2],[2],[2]], verbosity=FULL)

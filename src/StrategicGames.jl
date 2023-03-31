@@ -209,7 +209,7 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
         end
     end
 
-    @constraints m begin
+    @NLconstraints m begin
         slack[idx in idxSet], # either rₙⱼ or sₙⱼ must be zero
             r[idx] * s[idx] == 0
         utility[idx in idxSet], # the expected utility for each action must be constant, for each nPlayers
@@ -387,13 +387,13 @@ julia> best_response(expand_dimensions(payoff_array),[[0.5,0.5],[0.5,0.5]],2)
 (expected_payoff = 4.0, optimal_strategy = [0.0, 1.0], status = MathOptInterface.OPTIMAL)
 ```
 """
-function best_response(payoff,strategy_profile,player;solver="GLPK",verbosity=STD)
+function best_response(payoff,strategy_profile,player;solver="HiGHS",verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     payoff_n = selectdim(payoff,nPlayers+1,player)
     init = strategy_profile[player]
     m = Model(getfield(eval(Symbol(solver)),:Optimizer))
-    if solver == "HiGHS"
+    if solver == "HiGHS" && verbosity <= STD
         set_optimizer_attribute(m, "output_flag", false)
     end
 
@@ -572,7 +572,7 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
         fix(s[idx0], 0.0; force=true);
     end
 
-    @constraints m begin
+    @NLconstraints m begin
         
         utility1[idx in idxSet1], # the expected utility for each action in the support must be constant, for each nPlayers
             sum(   
@@ -674,6 +674,17 @@ function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     return eqs
 end
 
+"""
+    nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
+
+Compute 1 [def] - `max_samples` Nash equilibria for a N-players generic game in normal form using support enumeration method.
+
+# Parameters
+
+# Notes
+- the output is always an array of named tuple with the following information: `equilibrium_strategies`, `expected_payoffs`, `supports` 
+
+"""
 function nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
