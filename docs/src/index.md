@@ -137,6 +137,17 @@ julia> eq_strategies = eq.equilibrium_strategies
  [0.33333333363970163, 0.6666666663602984]
 ```
 
+"Battle of the sex" game has indeed 3 different equilibria. We can find them using the support enumeration method:
+
+```julia
+julia> eqs           = nash_se(expand_dimensions(payoff_matrix),max_samples=Inf);
+julia> eq_strategies = [eq.equilibrium_strategies for eq in eqs] 
+3-element Vector{Vector{Vector{Float64}}}:
+ [[0.9999999999999999, 0.0], [0.9999999999999999, 0.0]]
+ [[0.0, 0.9999999999999999], [0.0, 0.9999999999999999]]
+ [[0.6666666666666666, 0.33333333333333337], [0.3333333333333333, 0.6666666666666667]]
+ ```
+
 #### Rock, paper, scissor
 ```julia
 julia> # Actions: Rock, Paper, Scissor (in the order)
