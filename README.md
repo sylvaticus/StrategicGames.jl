@@ -11,6 +11,7 @@ Check out the companion repository [GameTheoryNotes](https://github.com/sylvatic
 [![Build status (Github Actions)](https://github.com/sylvaticus/StrategicGames.jl/workflows/CI/badge.svg)](https://github.com/sylvaticus/StrategicGames.jl/actions)
 [![codecov.io](http://codecov.io/github/sylvaticus/StrategicGames.jl/coverage.svg?branch=main)](http://codecov.io/github/sylvaticus/StrategicGames.jl?branch=main)
 
+
 ## Basic example
 
 Other examples are available in the [`Examples`](https://sylvaticus.github.io/StrategicGames.jl/dev/#examples) section of the documentation.
@@ -53,8 +54,8 @@ false
  ## Other game-theory libraries
 
 **Julia**
- - **[Nash.jl](https://github.com/KrainskiL/Nash.jl)** Has several functions to generate games in normal form, determine best response and if a strategy profile is a Nash Equilibrium (NE) but it doesn't provide a functionality to retrieve a NE, except for 2 players simmetric games 
- - **[GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)** Inter alia, compute N-players pure strategy NE, 2-players mixed strategy games (`lrsnash`, using exact arithmetics) and N-players mixed strategies NE using a solver of the polynomial equation representation of the complementarity conditions (`hc_solve`). However this "generic" N-player solver become easily intractable (we tried a 10x10 actions game). Further, compilation times are huge.
+ - **[Nash.jl](https://github.com/KrainskiL/Nash.jl)** Has several functions to generate games in normal form, determine best response and if a strategy profile is a Nash Equilibrium (NE) but it doesn't provide a functionality to retrieve a NE, except for 2 players simmetric games
+ - **[GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)** Inter alia, compute N-players pure strategy NE, 2-players mixed strategy games (`lrsnash`, using exact arithmetics) and N-players mixed strategies NE using a solver of the polynomial equation representation of the complementarity conditions (`hc_solve`). However this "generic" N-player solver become easily intractable, as it doesn't seems to have a dominance check. Further, compilation times are huge.
 
 **Non-Julia**
  - [Nashpy](https://github.com/drvinceknight/Nashpy): two players only
@@ -62,5 +63,8 @@ false
  - [Sage Math]()
  - [GtNash](https://forgemia.inra.fr/game-theory-tools-group/gtnash/-/tree/main/)
 
+## Acknowledgements
 
+The development of this package at the _Bureau d'Economie Théorique et Appliquée_ (BETA, Nancy) was supported by the French National Research Agency through the [Laboratory of Excellence ARBRE](http://mycor.nancy.inra.fr/ARBRE/), a part of the “Investissements d'Avenir” Program (ANR 11 – LABX-0002-01).
 
+[![BLogos](assets/logos_betaumr.png)](hhttp://www.beta-umr7522.fr/)
