@@ -16,11 +16,9 @@ Check out the companion repository [GameTheoryNotes](https://github.com/sylvatic
 Other examples are available in the [`Examples`](https://sylvaticus.github.io/StrategicGames.jl/dev/#examples) section of the documentation.
 
 ```julia
-julia> # Prisoner's dilemma. N players are supported
-       U = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
-2×2 Matrix{Tuple{Int64, Int64}}:
- (-1, -1)  (-3, 0)
- (0, -3)   (-2, -2)
+julia> # Prisoner's dilemma (N players are also supported in all functions)
+       payoff = [(-1,-1) (-3,  0);
+                 ( 0,-3) (-2, -2)];
 julia> # From N-dimensional array of tuples to N+1 arrays of scalars    
        payoff_array = expand_dimensions(U);
 julia> # Find all the dominated strategies for the two players
@@ -28,11 +26,15 @@ julia> # Find all the dominated strategies for the two players
 2-element Vector{Vector{Int64}}:
  [1]
  [1]
-julia> # Compute one Nash Equilibrium of the Game using LCP (linear complementarity) formulation       
+julia> # Compute one Nash Equilibrium of the Game using complementarity formulation
        eq = nash_cp(payoff_array).equilibrium_strategies
 2-element Vector{Vector{Float64}}:
- [-4.049752569180346e-11, 1.0000000000404976]
- [-4.0497525691839856e-11, 1.0000000000404976]
+ [0.0, 0.9999999887780999]
+ [0.0, 0.9999999887780999]
+julia> # Compute all isolated Nash equilibria using support enumeration
+       eqs = nash_se(payoff_array,max_samples=Inf)
+1-element Vector{NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64}, Vector{Vector{Int64}}}}}:
+ (equilibrium_strategies = [[0.0, 0.9999999999999999], [0.0, 0.9999999999999999]], expected_payoffs = [-1.9999999999999678, -1.9999999999999678], supports = [[2], [2]])
 julia> # Best response for player 2
        best_response(payoff_array,[[0.5,0.5],[0.5,0.5]],2).optimal_strategy
 2-element Vector{Float64}:

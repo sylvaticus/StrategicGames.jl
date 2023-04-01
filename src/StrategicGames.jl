@@ -1,19 +1,17 @@
 """
     StrategicGames package
 
-Strategic Games provides functionalities to work with strategic games, including finding Nash equilibrium in simultaneous games when mixed strategies are allowed. 
+Strategic Games provides functionalities to work with strategic games, including finding mixed or pure Nash equilibria in simultaneous games (currently [`nash_se`](@ref), using support enumeration, and [`nash_cp`](@ref) solving the complementarity problem).
 
-Unless otherwise stated, all functions work with generic n players (the examples generally show 2 players for simplicity) and assume the payoff "matrix" to be in the form of N-players + 1 dimensional arrays, where each dimension except the last one is given by the number of discrete actions available to each player and the last dimension is given by the number of players.
-A convenient function allows to transform a N-dimensional array of tuples (the payoff for the various players) to the Nplayers+1 dimensional array
-
-
+Unless otherwise stated, all functions work with generic n players (the examples generally show 2 players for simplicity) and assume the payoff "matrix" to be in the form of N-players + 1 dimensional arrays, where each dimension except the last one is given by the number of discrete actions available to each player, while the last dimension is given by the number of players.
+Convenient functions ([`expand_dimensions`](@ref) and [`unstack_payoff`](@ref)) allows to transform payoff encoded in other form to the  N-players+1 dimensional array format used in this package.
 """
 module StrategicGames
 
 using LinearAlgebra, Combinatorics, JuMP, Ipopt, GLPK, HiGHS
 
 export Verbosity, NONE, LOW, STD, HIGH, FULL
-export expand_dimensions
+export expand_dimensions, unstack_payoff
 export expected_payoff
 export dominated_strategies, best_response, is_best_response, is_nash
 export nash_on_support
@@ -27,7 +25,7 @@ Many functions accept a `verbosity` parameter.
 
 Choose between: `NONE`, `LOW`, `STD` [default], `HIGH` and `FULL`.
 
-Under default verbosity (`STD`) no output is print unless something unexpected in most conditions (but not necessarily an error) is detected 
+Under default verbosity (`STD`) no output is printed, unless something unexpected in most conditions (but not necessarily an error) is detected 
 """
 @enum Verbosity NONE=0 LOW=10 STD=20 HIGH=30 FULL=40
 
@@ -63,6 +61,47 @@ function expand_dimensions(x::AbstractArray{T}) where {T <: Tuple{Vararg{T2}}} w
     for idx in CartesianIndices(xsize)
         for j in 1:size_add
             out[Tuple(idx)...,j] = x[idx][j]
+        end
+    end
+    return out
+end
+
+"""
+    unstack_payoff(x::AbstractMatrix)
+
+Unstack a payoff encoded in _long_ format, where the first half of the columns are the action positions for each player and the second half of the columns are the payoff for the various players, to the Nplayers+1 dimensional array used in the library.
+
+# Example
+```julia
+julia> # 2 players with 2 and 3 actions respectively
+       long_payoff = [
+            1 1 0.1 0.3;
+            1 2 4 6;
+            1 3 4 2;
+            2 2 4 5;
+            2 1 0.1 0.3;
+            2 3 1.3 2;];
+julia> unstack_payoff(long_payoff)
+2×3×2 Array{Float64, 3}:
+[:, :, 1] =
+ 0.1  4.0  4.0
+ 0.1  4.0  1.3
+[:, :, 2] =
+ 0.3  6.0  2.0
+ 0.3  5.0  2.0
+```
+"""
+function unstack_payoff(x::AbstractMatrix)
+    nCols = size(x,2) 
+    nCols % 2 == 0 || error("The matrix should have an even number of column, when the first half are actions ids and the second half are the relative payoffs for the various players")
+    nActions = (Int.([maximum(x[:,c]) for c in 1:Int(nCols/2)])...,)
+    nPlayers = Int(nCols/2)
+    out = Array{Float64,nPlayers+1}(undef,nActions...,nPlayers)
+    for r in eachrow(x)
+        pos  = Int.(r[1:nPlayers])
+        data = r[nPlayers+1:end]
+        for n in 1:nPlayers
+            out[pos...,n] = data[n]
         end
     end
     return out
@@ -509,7 +548,7 @@ true
 ```
 """
 function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]));verbosity=STD)  
-    verbosity == FULL && println(support)
+    verbosity == FULL && println("Looking for NEq on support: $support")
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
@@ -560,7 +599,7 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     #println("idxSet1: \n$idxSet1")
 
     m = Model(Ipopt.Optimizer)
-    if verbosity <= STD
+    if verbosity < FULL
         set_optimizer_attribute(m, "print_level", 0)
     end
  
@@ -593,7 +632,8 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
 
     @objective m Max sum(u[n] for n in 1:nPlayers)
     if verbosity == FULL
-        print(m)
+        println("Optimisation model to be solved:")
+        println(m)
     end
     optimize!(m)
     status = termination_status(m)
@@ -627,6 +667,12 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     return (status=status,equilibrium_strategies=optStrategies,expected_payoffs=optU,solved)
 end
 
+"""
+    nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
+
+ONLY FOR BENCHMARKS, UNEXPORTED
+Solves Nash eqs using support enumeration for 2 players game using strictly the approach of [Porter-Nudelman-Shoham (2008)](https://doi.org/10.1016/j.geb.2006.03.015)
+"""
 function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
@@ -675,15 +721,35 @@ function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
 end
 
 """
-    nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
+    nash_se(payoff_array; allow_mixed=true, max_samples=1, verbosity=STD)
 
-Compute 1 [def] - `max_samples` Nash equilibria for a N-players generic game in normal form using support enumeration method.
+Compute `max_samples` (default one) Nash equilibria for a N-players generic game in normal form using support enumeration method.
 
 # Parameters
+- `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
+- `allow_mixed`: wether to look and report also mixed strategies (default) or look only for pure strategies (if any)
+- `max_samples`: number of found sample Nash equilibria needed to stop the algorithm [def: `1`]. Set it to `Inf` to look for all the possible isolated equilibria of the game
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
-- the output is always an array of named tuple with the following information: `equilibrium_strategies`, `expected_payoffs`, `supports` 
+- This function uses a support enumeration method to avoid the complementarity conditions and solve simpler problems conditional to a specific support.  More specifically we use the heuristic of [Porter-Nudelman-Shoham (2008)](https://doi.org/10.1016/j.geb.2006.03.015) and a dominance check, altought not recursively as in  [Turocy (2007)](https://web.archive.org/web/20230401080619/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36ba7977838df2bfdeab22157b0ed6ce940fb2be)
+- Given enought computational resources, all isolated Nash equilibria that are unique for a given support should be returned by this function 
 
+# Returns
+- A vector of named tuples (even for the default single `max_samples`) with the following information: `equilibrium_strategies`, `expected_payoffs`, `supports` 
+
+# Example
+```julia
+julia> using StrategicGames
+julia> payoff = expand_dimensions([(3,3) (3,2);
+                                   (2,2) (5,6);
+                                   (0,3) (6,1)]);
+julia> eqs = nash_se(payoff,max_samples=Inf)
+3-element Vector{NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64}, Vector{Vector{Int64}}}}}:
+ (equilibrium_strategies = [[0.9999999999999999, 0.0, 0.0], [0.9999999999999999, 0.0]], expected_payoffs = [2.9999999999999516, 2.9999999999999516], supports = [[1], [1]])
+ (equilibrium_strategies = [[0.8, 0.2, 0.0], [0.6666666666666666, 0.33333333333333337]], expected_payoffs = [3.0, 2.8000000000000003], supports = [[1, 2], [1, 2]])
+ (equilibrium_strategies = [[0.0, 0.33333333333333337, 0.6666666666666666], [0.33333333333333315, 0.6666666666666669]], expected_payoffs = [4.000000000000001, 2.6666666666666665], supports = [[2, 3], [1, 2]])
+```
 """
 function nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     nActions = size(payoff)[1:end-1]
@@ -720,6 +786,9 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
                 if eq_test.solved
                     eq = (equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=S)
                     push!(eqs,eq)
+                    if verbosity > STD
+                        println("Eq #$(length(eqs))/$max_samples found: $eq")
+                    end
                     if length(eqs) == max_samples
                         return eqs
                     end
