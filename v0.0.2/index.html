@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Index · StrategicGames Documentation</title><script async src="https://www.googletagmanager.com/gtag/js?id=G-DC4KL97F1C"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DC4KL97F1C', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">StrategicGames Documentation</a></span></div><form class="docs-search" action="search.html"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href="index.html">Index</a><ul class="internal"><li><a class="tocitem" href="#Index"><span>Index</span></a></li><li><a class="tocitem" href="#examples"><span>Some examples</span></a></li><li><a class="tocitem" href="#Acknowledgements"><span>Acknowledgements</span></a></li></ul></li><li><a class="tocitem" href="api.html">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="index.html">Index</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="index.html">Index</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sylvaticus/StrategicGames.jl/blob/main/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="StrategicGames-package-documentation"><a class="docs-heading-anchor" href="#StrategicGames-package-documentation">StrategicGames package documentation</a><a id="StrategicGames-package-documentation-1"></a><a class="docs-heading-anchor-permalink" href="#StrategicGames-package-documentation" title="Permalink"></a></h1><p><a href="https://github.com/sylvaticus/StrategicGames.jl">GitHub repository</a></p><article class="docstring"><header><a class="docstring-binding" id="StrategicGames" href="#StrategicGames"><code>StrategicGames</code></a> — <span class="docstring-category">Module</span></header><section><div><pre><code class="language-julia hljs">StrategicGames package</code></pre><p>Strategic Games provides functionalities to work with strategic games, including finding mixed or pure Nash equilibria in simultaneous games (currently <a href="api.html#StrategicGames.nash_se-Tuple{Any}"><code>nash_se</code></a>, using support enumeration, and <a href="api.html#StrategicGames.nash_cp-Tuple{Any}"><code>nash_cp</code></a> solving the complementarity problem).</p><p>Unless otherwise stated, all functions work with generic n players (the examples generally show 2 players for simplicity) and assume the payoff &quot;matrix&quot; to be in the form of N-players + 1 dimensional arrays, where each dimension except the last one is given by the number of discrete actions available to each player, while the last dimension is given by the number of players. Convenient functions (<a href="api.html#StrategicGames.expand_dimensions-Union{Tuple{AbstractArray{T}}, Tuple{T}, Tuple{T2}} where {T2, T&lt;:Tuple{Vararg{T2}}}"><code>expand_dimensions</code></a> and <a href="api.html#StrategicGames.unstack_payoff-Tuple{AbstractMatrix}"><code>unstack_payoff</code></a>) allows to transform payoff encoded in other form to the  N-players+1 dimensional array format used in this package.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/sylvaticus/StrategicGames.jl/blob/00f306e9075e6898c49d0472b157d7d657aaf1e3/src/StrategicGames.jl#L1-L8">source</a></section></article><h2 id="Index"><a class="docs-heading-anchor" href="#Index">Index</a><a id="Index-1"></a><a class="docs-heading-anchor-permalink" href="#Index" title="Permalink"></a></h2><p>StrategicGames provides the following functions:</p><ul><li><a href="api.html#StrategicGames.Verbosity"><code>StrategicGames.Verbosity</code></a></li><li><a href="api.html#StrategicGames.best_response-Tuple{Any, Any, Any}"><code>StrategicGames.best_response</code></a></li><li><a href="api.html#StrategicGames.dominated_strategies-Tuple{Any}"><code>StrategicGames.dominated_strategies</code></a></li><li><a href="api.html#StrategicGames.expand_dimensions-Union{Tuple{AbstractArray{T}}, Tuple{T}, Tuple{T2}} where {T2, T&lt;:Tuple{Vararg{T2}}}"><code>StrategicGames.expand_dimensions</code></a></li><li><a href="api.html#StrategicGames.expected_value-Tuple{Any, Any}"><code>StrategicGames.expected_value</code></a></li><li><a href="api.html#StrategicGames.is_best_response-Tuple{Any, Any, Any}"><code>StrategicGames.is_best_response</code></a></li><li><a href="api.html#StrategicGames.is_nash-Tuple{Any, Any}"><code>StrategicGames.is_nash</code></a></li><li><a href="api.html#StrategicGames.nash_cp-Tuple{Any}"><code>StrategicGames.nash_cp</code></a></li><li><a href="api.html#StrategicGames.nash_on_support"><code>StrategicGames.nash_on_support</code></a></li><li><a href="api.html#StrategicGames.nash_se-Tuple{Any}"><code>StrategicGames.nash_se</code></a></li><li><a href="api.html#StrategicGames.nash_se2-Tuple{Any}"><code>StrategicGames.nash_se2</code></a></li><li><a href="api.html#StrategicGames.unstack_payoff-Tuple{AbstractMatrix}"><code>StrategicGames.unstack_payoff</code></a></li></ul><h2 id="examples"><a class="docs-heading-anchor" href="#examples">Some examples</a><a id="examples-1"></a><a class="docs-heading-anchor-permalink" href="#examples" title="Permalink"></a></h2><pre><code class="language-julia hljs">julia&gt; using Pkg; Pkg.add(&quot;StrategicGames&quot;) # only once to install the library
+julia&gt; using StrategicGames</code></pre><h4 id="players-game-with-payoff-a-function-of-the-number-of-players-choosing-the-same-option"><a class="docs-heading-anchor" href="#players-game-with-payoff-a-function-of-the-number-of-players-choosing-the-same-option">3-players game with payoff a function of the number of players choosing the same option</a><a id="players-game-with-payoff-a-function-of-the-number-of-players-choosing-the-same-option-1"></a><a class="docs-heading-anchor-permalink" href="#players-game-with-payoff-a-function-of-the-number-of-players-choosing-the-same-option" title="Permalink"></a></h4><p>The 3 players in this game can choose between <code>X</code> or <code>Y</code> with payoffs respectively <code>2nₓ - 2nₓ²+3</code> and <code>4-nᵧ</code> where <code>nₓ</code> and <code>nᵧ</code> represent the number of players that choose <code>X</code> or <code>Y</code>. (<em>this example is taken from https://www.youtube.com/watch?v=bKrwQKUT0v8 where it is analytically solved</em>)</p><pre><code class="language-julia hljs">julia&gt; U = [(0,0,0) ; (3,3,3) ;; (3,3,3) ; (2,2,4) ;;;
+            (3,3,3) ; (2,4,2) ;; (4,2,2) ; (1,1,1) ;;;]
+2×2×2 Array{Tuple{Int64, Int64, Int64}, 3}:
+[:, :, 1] =
+ (0, 0, 0)  (3, 3, 3)
+ (3, 3, 3)  (2, 2, 4)
+[:, :, 2] =
+ (3, 3, 3)  (4, 2, 2)
+ (2, 4, 2)  (1, 1, 1)
+julia&gt; payoff_array = expand_dimensions(U) # from n-dimensional array of tuples to n+1 arrays of scalars
+2×2×2×3 Array{Int64, 4}:
+[:, :, 1, 1] =
+ 0  3
+ 3  2
+[:, :, 2, 1] =
+ 3  4
+ 2  1
+[:, :, 1, 2] =
+ 0  3
+ 3  2
+[:, :, 2, 2] =
+ 3  2
+ 4  1
+[:, :, 1, 3] =
+ 0  3
+ 3  4
+[:, :, 2, 3] =
+ 3  2
+ 2  1
+julia&gt; eq  = nash_cp(payoff_array)
+(status = MathOptInterface.LOCALLY_SOLVED, equilibrium_strategies = [[0.5811388300841898, 0.4188611699158103], [0.5811388300841898, 0.4188611699158103], [0.5811388300841898, 0.41886116991581035]], expected_payoffs = [2.16227766016838, 2.16227766016838, 2.16227766016838])
+julia&gt; eq_strategies = eq.equilibrium_strategies
+3-element Vector{Vector{Float64}}:
+ [0.5811388300841898, 0.4188611699158103]
+ [0.5811388300841898, 0.4188611699158103]
+ [0.5811388300841898, 0.41886116991581035]
+julia&gt; p = -1 + sqrt(10)/2
+0.5811388300841898
+julia&gt; eq_strategies ≈ [[p,1-p],[p,1-p],[p,1-p]]
+true
+julia&gt; expected_payoff(payoff_array,eq_strategies)
+3-element Vector{Float64}:
+ 2.1622776601683795
+ 2.1622776601683795
+ 2.1622776601683795</code></pre><h4 id="Prisoner&#39;s-dilemma"><a class="docs-heading-anchor" href="#Prisoner&#39;s-dilemma">Prisoner&#39;s dilemma</a><a id="Prisoner&#39;s-dilemma-1"></a><a class="docs-heading-anchor-permalink" href="#Prisoner&#39;s-dilemma" title="Permalink"></a></h4><pre><code class="language-julia hljs">julia&gt; # Pay-off matrix
+       U = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (-1, -1)  (-3, 0)
+ (0, -3)   (-2, -2)
+julia&gt; # From N-dimensional array of tuples to N+1 arrays of scalars    
+       payoff_array = expand_dimensions(U);
+julia&gt; # Find all the dominated strategies for the two players
+       dominated_strategies(payoff_array)
+2-element Vector{Vector{Int64}}:
+ [1]
+ [1]
+julia&gt; # Compute one Nash Equilibrium of the Game using LCP (linear complementarity) formulation       
+       eq = nash_cp(payoff_array).equilibrium_strategies
+2-element Vector{Vector{Float64}}:
+ [-4.049752569180346e-11, 1.0000000000404976]
+ [-4.0497525691839856e-11, 1.0000000000404976]
+julia&gt; # Best response for player 2
+       best_response(payoff_array,[[0.5,0.5],[0.5,0.5]],2).optimal_strategy
+2-element Vector{Float64}:
+ 0.0
+ 1.0
+julia&gt; # Expected payoffs given a specific strategy profile
+       expected_payoff(payoff_array,[[1,0],[1,0]])
+2-element Vector{Int64}:
+ -1
+ -1
+julia&gt; # Is this strategy profile a Nash equilibrium ?
+       is_nash(payoff_array,[[1,0],[1,0]]) 
+false</code></pre><h4 id="Head-or-tail"><a class="docs-heading-anchor" href="#Head-or-tail">Head or tail</a><a id="Head-or-tail-1"></a><a class="docs-heading-anchor-permalink" href="#Head-or-tail" title="Permalink"></a></h4><pre><code class="language-julia hljs">julia&gt; payoff_matrix = [(1,-1) (-1,1); (-1,1) (1, -1)]
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (1, -1)  (-1, 1)
+ (-1, 1)  (1, -1)
+julia&gt; eq            = nash_cp(expand_dimensions(payoff_matrix));
+julia&gt; eq_strategies = eq.equilibrium_strategies
+2-element Vector{Vector{Float64}}:
+ [0.5, 0.5]
+ [0.5, 0.5]</code></pre><h4 id="Battle-of-the-sex"><a class="docs-heading-anchor" href="#Battle-of-the-sex">Battle of the sex</a><a id="Battle-of-the-sex-1"></a><a class="docs-heading-anchor-permalink" href="#Battle-of-the-sex" title="Permalink"></a></h4><pre><code class="language-julia hljs">julia&gt; payoff_matrix = [(2,1) (0,0); (0,0) (1,2)]
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (2, 1)  (0, 0)
+ (0, 0)  (1, 2)
+julia&gt; eq            = nash_cp(expand_dimensions(payoff_matrix));
+julia&gt; eq_strategies = eq.equilibrium_strategies 
+2-element Vector{Vector{Float64}}:
+ [0.6666666663602984, 0.33333333363970163]
+ [0.33333333363970163, 0.6666666663602984]</code></pre><h4 id="Rock,-paper,-scissor"><a class="docs-heading-anchor" href="#Rock,-paper,-scissor">Rock, paper, scissor</a><a id="Rock,-paper,-scissor-1"></a><a class="docs-heading-anchor-permalink" href="#Rock,-paper,-scissor" title="Permalink"></a></h4><pre><code class="language-julia hljs">julia&gt; # Actions: Rock, Paper, Scissor (in the order)
+       U = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ]
+3×3 Matrix{Tuple{Int64, Int64}}:
+ (0, 0)   (-1, 1)  (1, -1)
+ (1, -1)  (0, 0)   (-1, 1)
+ (-1, 1)  (1, -1)  (0, 0)
+julia&gt; eq = nash_cp(expand_dimensions(U)).equilibrium_strategies
+2-element Vector{Vector{Float64}}:
+ [0.3333333333333333, 0.3333333333333333, 0.3333333333333333]
+ [0.3333333333333333, 0.3333333333333333, 0.3333333333333333]</code></pre><h4 id="A-biased-penalty-kick-game"><a class="docs-heading-anchor" href="#A-biased-penalty-kick-game">A biased penalty kick game</a><a id="A-biased-penalty-kick-game-1"></a><a class="docs-heading-anchor-permalink" href="#A-biased-penalty-kick-game" title="Permalink"></a></h4><p>The row player is the kicker and the column player is the goalkeeper, first action is kick/jump on one direction, second one is kick/jump on the other direction. The kicker is more efficient (or, alternatively, the goalkeeper is less efficient) on the second direction.</p><pre><code class="language-julia hljs">julia&gt; payoff_matrix = [(-1,1) (1,-1); (1,-1) (0, 0)]
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (-1, 1)  (1, -1)
+ (1, -1)  (0, 0)
+julia&gt; eq            = nash_cp(expand_dimensions(payoff_matrix));
+julia&gt; eq_strategies = eq.equilibrium_strategies
+2-element Vector{Vector{Float64}}:
+ [0.3333333333332723, 0.6666666666667278]
+ [0.33333333333337, 0.6666666666666301]</code></pre><h2 id="Acknowledgements"><a class="docs-heading-anchor" href="#Acknowledgements">Acknowledgements</a><a id="Acknowledgements-1"></a><a class="docs-heading-anchor-permalink" href="#Acknowledgements" title="Permalink"></a></h2><p>The development of this package at the <em>Bureau d&#39;Economie Théorique et Appliquée</em> (BETA, Nancy) was supported by the French National Research Agency through the <a href="http://mycor.nancy.inra.fr/ARBRE/">Laboratory of Excellence ARBRE</a>, a part of the “Investissements d&#39;Avenir” Program (ANR 11 – LABX-0002-01).</p><p><a href="hhttp://www.beta-umr7522.fr/"><img src="assets/logos_betaumr.png" alt="BLogos"/></a></p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api.html">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Saturday 1 April 2023 15:58">Saturday 1 April 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
