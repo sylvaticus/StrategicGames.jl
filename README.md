@@ -2,7 +2,7 @@
 
 A set of functions in pure Julia for analysing strategic generic N-players games using concepts and tools of Game Theory.
 
-While written in Julia, the library is easily accessible in R or Python using the [`JuliaCall`](https://github.com/Non-Contradiction/JuliaCall) and [`PyJulia`](https://github.com/JuliaPy/pyjulia) packages respectively.
+While written in Julia, the library is easily accessible in R or Python using the [`JuliaCall`](https://github.com/Non-Contradiction/JuliaCall) and [`PyJulia`](https://github.com/JuliaPy/pyjulia) packages respectively. Examples are [provided here](https://sylvaticus.github.io/StrategicGames.jl/dev/using_python_or_r.html#using_other_languages).
 
 Check out the companion repository [GameTheoryNotes](https://github.com/sylvaticus/GameTheoryNotes) for introductory notes on the Game Theory approach and the documentation at the links below for further information on the package and how to use it.
 
