@@ -6,7 +6,7 @@ makedocs(
     sitename="StrategicGames Documentation",
     pages = [
         "Index" => "index.md",
-        "Using Python or R" => "using_python_or_r.md",
+        "Using Python or R" => "using_other_languages.md",
         "API"   => "api.md"
     ],
     format = Documenter.HTML(prettyurls = false,

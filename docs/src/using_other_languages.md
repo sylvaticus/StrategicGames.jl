@@ -1,6 +1,8 @@
 # [Using StrategicGames.jl from other programming languages](@id using_other_languages)
 
-In this section we learn how to use `StrategicGames` in Python or R is almost as simple as to use a native library, with objects converted automatically between Julia and Python, and hence no specific package wrappers are needed. For Python we will show two separate "Julia from Python" interfaces, [PyJulia](https://github.com/JuliaPy/pyjulia) and [JuliaCall](https://github.com/cjdoris/PythonCall.jl) with the second one being the most recent one, while for R we will show the [JuliaCall](https://github.com/Non-Contradiction/JuliaCall) R package (no relations with the homonymous Python package).
+
+In this section we provide two examples of using `StrategicGames` directly in Python or R (with automatic object conversion). Click `Details` for a more extended explanation of these examples.
+While I have no experience, the same approach can be used to access `StrategicGames` from languages with a binding to Julia like Matlab or Javascript. 
 
 ## Use StrategicGames in Python
 
@@ -24,8 +26,11 @@ True
 ```
 
 ```@raw html
-<details><summary>The same example discussed more verbosely</summary>
+<details><summary>Details</summary>
 ```
+
+We show for Python two separate "Julia from Python" interfaces, [PyJulia](https://github.com/JuliaPy/pyjulia) and [JuliaCall](https://github.com/cjdoris/PythonCall.jl) with the second one being the most recent one.
+
 #### With the classical `pyjulia` package
 
 [PyJulia](https://github.com/JuliaPy/pyjulia) is a relativelly old method to use Julia code and libraries in Python. It works great but it requires that you already have a Julia working installation on your PC, so we need first to download and install the Julia binaries for our operating system from [JuliaLang.org](https://julialang.org/). Be sure that Julia is working by opening the Julia terminal and e.g. typing `println("hello world")`
@@ -201,10 +206,11 @@ Julia Object of type Vector{Vector{Int64}}.
 
 
 ```@raw html
-<details><summary>The same example discussed more verbosely</summary>
+<details><summary>Details</summary>
 ```
+For R we show how to access `StrategicGames` functionalities using the [JuliaCall](https://github.com/Non-Contradiction/JuliaCall) R package (no relations with the homonymous Python package).
 
-To use `StrategicGames` in R we start by installing the [`JuliaCall`](https://cran.r-project.org/web/packages/JuliaCall/index.html) R package:
+Let's start by installing [`JuliaCall`](https://cran.r-project.org/web/packages/JuliaCall/index.html) in R:
 
 ```{r}
 > install.packages("JuliaCall")
