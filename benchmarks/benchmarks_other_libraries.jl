@@ -75,7 +75,7 @@ neqs = length(eqs)
 res  = @binfo nash_se2($small_3x2_StrategicGames,max_samples=Inf)
 push!(bms,[game_name,"StrategicGames","nash_se2",res...,neqs,""])
 
-eqs = nash_se(small_3x2_StrategicGames,max_samples=1, mt=true)
+eqs = nash_se(small_3x2_StrategicGames,max_samples=Inf, mt=true)
 neqs = length(eqs)
 res = @binfo nash_se($small_3x2_StrategicGames,max_samples=Inf)
 push!(bms,[game_name,"StrategicGames","nash_se",res...,neqs,""])
@@ -315,6 +315,11 @@ eqs = nash_se(rand_6x7_StrategicGames,max_samples=1,mt=true)
 neqs = length(eqs)
 res = @binfo nash_se($rand_6x7_StrategicGames,max_samples=1,mt=true)
 push!(bms,[game_name,"StrategicGames","nash_se",res...,neqs,""])
+
+eqs  = nash_cp(rand_6x7_StrategicGames)
+neqs = length(eqs)
+res  = @binfo nash_se2($rand_6x7_StrategicGames,max_samples=1)
+push!(bms,[game_name,"StrategicGames","nash_se2",res...,neqs,""])
 
 eqs_gen = rand_6x7_nash.vertex_enumeration(); eqs = py"next($eqs_gen)"
 neqs= 1
