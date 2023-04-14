@@ -64,6 +64,42 @@ false
  - [GtNash](https://forgemia.inra.fr/game-theory-tools-group/gtnash/-/tree/main/)
 
 ### Benchmarks
+The following benchmarks have been run on a Interl Core 5 laptop on StrategicGames v0.0.3.
+See [benchmarks/benchmarks_other_libraries.jl](/blob/main/benchmarks/benchmarks_other_libraries.jl) for details.
+
+| benchmark_name | library | method | time (ms) | memory (MB) | alloc | n eqs | notes |
+| ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| small_3x2 | GameTheory | hc_solve | 15.850703 | 2.73949432373047 | 38255 | 3 |  |
+| small_3x2 | StrategicGames | nash_se2 | 53.309995 | 1.28941345214844 | 27212 | 3 |  |
+| small_3x2 | StrategicGames | nash_se | 20.585117 | 0.855712890625 | 17694 | 3 |  |
+| small_3x2 | nashpy | vertex_enumeration | 21.789339 |  |  | 3 |  |
+| small_3x2 | nashpy | lemke_howson_enumeration | 1.6642245 |  |  | 5 | repeated results |
+| small_3x2 | nashpy | support_enumeration | 2.6816925 |  |  | 3 |  |
+| small_3x2 | pygambit | lcp_solve | 0.58145 |  |  | 3 |  |
+| small_3x2 | pygambit | ExternalEnumPolySolver | 2.849971 |  |  | 3 |  |
+| rand_6x7 | GameTheory | hc_solve | 24319.041077 | 219.292503356934 | 6639449 | 1 |  |
+| rand_6x7 | StrategicGames | nash_se2 | 6492.729969 | 183.924499511719 | 3519791 | 1 |  |
+| rand_6x7 | StrategicGames | nash_se | 2039.13322 | 383.733200073242 | 7113996 | 1 |  |
+| rand_6x7 | nashpy | vertex_enumeration | 483.3956685 |  |  | 1 |  |
+| rand_6x7 | nashpy | lemke_howson_enumeration | 10.209924 |  |  | 13 | repeated results |
+| rand_6x7 | nashpy | support_enumeration | 1002.632789 |  |  | 0 |  |
+| rand_6x7 | pygambit | lcp_solve | 8.6134035 |  |  | 1 |  |
+| rand_6x7 | pygambit | ExternalEnumPolySolver | 466356.137884 |  |  | 1 |  |
+| rand_dec_6x5 | GameTheory | hc_solve | 2891.127174 | 12.3860321044922 | 129350 | 3 |  |
+| rand_dec_6x5 | StrategicGames | nash_se2 | 1440.759078 | 48.3359832763672 | 936423 | 3 |  |
+| rand_dec_6x5 | StrategicGames | nash_se | 621.126718 | 72.9645233154297 | 1383871 | 3 |  |
+| rand_dec_6x5 | nashpy | vertex_enumeration | 115.396802 |  |  | 3 |  |
+| rand_dec_6x5 | nashpy | lemke_howson_enumeration | 4.757534 |  |  | 11 | repeated results |
+| rand_dec_6x5 | nashpy | support_enumeration | 247.327852 |  |  | 3 |  |
+| rand_4x4x2 | GameTheory | hc_solve | 5085.485446 | 14.032585144043 | 163760 | 4 | 2 eq missing |
+| rand_4x4x2 | StrategicGames | nash_se | 4332.1466 | 68.4856872558594 | 1243570 | 7 | 1 eq repeated |
+| rand_4x4x2 | pygambit | ExternalEnumPolySolver | 924.560486 |  |  | 5 | 1 eq missed |
+| rand_6x7_1st_eq | GameTheory | hc_solve | 20529.340606 | 193.500938415527 | 5212846 | 1 |  |
+| rand_6x7_1st_eq | StrategicGames | nash_se2 | 207.214093 | 4.487548828125 | 86445 | 1 |  |
+| rand_6x7_1st_eq | StrategicGames | nash_se | 31.575248 | 4.26963806152344 | 81730 | 1 |  |
+| rand_6x7_1st_eq | nashpy | vertex_enumeration | 221.681001 |  |  | 1 |  |
+| rand_6x7_1st_eq | nashpy | lemke_howson_enumeration | 0.832785 |  |  | 1 |  |
+| rand_6x7_1st_eq | nashpy | support_enumeration | 0.00410225 |  |  | 0 | no eq reported |
 
 
 ## Acknowledgements

@@ -29,7 +29,7 @@ eq  = nash_cp(payoff_array)
 eq_strategies = eq.equilibrium_strategies
 p = -1 + sqrt(10)/2
 @test eq_strategies ≈ [[p,1-p],[p,1-p],[p,1-p]]
-is_nash(payoff_array,eq_strategies)
+StrategicGames.is_nash(payoff_array,eq_strategies)
 
 
 # Testing dominated_strategies
@@ -76,16 +76,16 @@ u = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
 payoff        = expand_dimensions(u)
 eq            = nash_cp(payoff)
 eq_strategies = eq.equilibrium_strategies
-opt_u         = best_response(payoff,[eq_strategies[1],[0.33,0.33,0.34],eq_strategies[3]],2).expected_payoff
-nash_u         = eq.expected_payoffs[2]
+opt_u         = StrategicGames.best_response(payoff,[eq_strategies[1],[0.33,0.33,0.34],eq_strategies[3]],2).expected_payoff
+nash_u        = eq.expected_payoffs[2]
 @test isapprox(opt_u,nash_u)
-@test is_best_response(payoff,eq_strategies,2)
-@test is_nash(payoff,eq_strategies) == true
+@test StrategicGames.is_best_response(payoff,eq_strategies,2)
+@test StrategicGames.is_nash(payoff,eq_strategies) == true
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
      (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
 payoff        = expand_dimensions(u)
 eq            = nash_cp(payoff,strict_domination_removal=false)
-@test is_nash(payoff,eq.equilibrium_strategies) == true
+@test StrategicGames.is_nash(payoff,eq.equilibrium_strategies) == true
 eq_se         = nash_se(payoff,max_samples=Inf)
 @test length(eq_se) == 1
 @test eq.equilibrium_strategies ≈ eq_se[1].equilibrium_strategies
@@ -122,7 +122,7 @@ p = unstack_payoff(long_payoff)
 u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
 payoff        = expand_dimensions(u)
 eq            = nash_cp(payoff)
-@test is_nash(payoff,eq.equilibrium_strategies) == true
+@test StrategicGames.is_nash(payoff,eq.equilibrium_strategies) == true
 
 U = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ] # head, rock, scissor Only eq is [[0.33,0.33,0.33],[0.33,0.33,0.33]]
 payoff = expand_dimensions(U)
@@ -141,42 +141,3 @@ payoff = expand_dimensions([(3,3) (3,2);
 eqs = nash_se(payoff,max_samples=Inf)
 @test length(eqs) == 3
 @test eqs[3].equilibrium_strategies ≈  [[0.0, 0.33333333333333337, 0.6666666666666666],[0.33333333333333315, 0.6666666666666669]]
-
-
-a = 1
-#=
-
-# ----------------------------------------------------------------
-u = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ]
-payoff   = expand_dimensions(u)
-eq = nash_se2(payoff,max_samples=Inf)
-eq = nash_se(payoff,max_samples=Inf)
-u = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
-payoff=(expand_dimensions(u))
-eq = nash_se2(payoff,max_samples=Inf,allow_mixed=false)
-eq = nash_se(payoff,max_samples=Inf,allow_mixed=false)
-u = [(1,-1) (-1,1); (-1,1) (1, -1)]
-payoff=(expand_dimensions(u))
-eq = nash_se2(payoff,max_samples=Inf)
-eq = nash_se(payoff,max_samples=Inf)
-u = [(2,1) (0,0); (0,0) (1,2)]
-payoff=(expand_dimensions(u))
-eq = nash_se2(payoff,max_samples=Inf)
-eq = nash_se(payoff,max_samples=Inf)
-is_nash(payoff,eq[1].equilibrium_strategies)
-
-payoff = rand(2,2,2,2,2,5)
-payoff = rand(2,2,3,2,4)
-dominated_strategies(payoff)
-eq = nash_se(payoff)
-nash_on_support(payoff,[[2],[2],[2],[2]], verbosity=FULL)
-
-=#
-#=
-u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
-payoff = expand_dimensions(u) 
-eq = nash_cp(payoff,ϵ=0.1)
-eq = nash_se2(payoff)
-is_nash(payoff,[[0,1,0],[0,1,0]])
-=#
-
