@@ -2,7 +2,7 @@
 
 
 In this section we provide two examples of using `StrategicGames` directly in Python or R (with automatic object conversion). Click `Details` for a more extended explanation of these examples.
-While I have no experience, the same approach can be used to access `StrategicGames` from languages with a binding to Julia like Matlab or Javascript. 
+While I have no experience, the same approach can be used to access `StrategicGames` from any language with a binding to Julia, like Matlab or Javascript. 
 
 ## Use StrategicGames in Python
 

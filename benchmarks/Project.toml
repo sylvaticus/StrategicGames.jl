@@ -1,0 +1,10 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+GameTheory = "64a4ffa8-f47c-4a47-8dad-aee7aadc3b51"
+Nash = "bd078fd0-4306-4e4b-b0ec-dacbec99dedf"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+StrategicGames = "21c4ae29-9918-4bcb-9542-b100d366d64c"

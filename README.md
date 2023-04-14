@@ -51,17 +51,20 @@ julia> # Is this strategy profile a Nash equilibrium ?
 false
 ```
 
- ## Other game-theory libraries
+## Other game-theory libraries & benchmarks
 
 **Julia**
  - **[Nash.jl](https://github.com/KrainskiL/Nash.jl)** Has several functions to generate games in normal form, determine best response and if a strategy profile is a Nash Equilibrium (NE) but it doesn't provide a functionality to retrieve a NE, except for 2 players simmetric games
- - **[GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)** Inter alia, compute N-players pure strategy NE, 2-players mixed strategy games (`lrsnash`, using exact arithmetics) and N-players mixed strategies NE using a solver of the polynomial equation representation of the complementarity conditions (`hc_solve`). However this "generic" N-player solver become easily intractable, as it doesn't seems to have a dominance check. Further, compilation times are huge.
+ - **[GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl)** Inter alia, compute N-players pure strategy NE, 2-players mixed strategy games (`lrsnash`, using exact arithmetics) and N-players mixed strategies NE using a solver of the polynomial equation representation of the complementarity conditions (`hc_solve`). However this "generic" N-player solver is slow, as it doesn't seem to have a dominance check. Further, compilation times are huge.
 
 **Non-Julia**
  - [Nashpy](https://github.com/drvinceknight/Nashpy): two players only
- - [Gambit](http://www.gambit-project.org/)
- - [Sage Math]()
+ - [Gambit](http://www.gambit-project.org/): many algorithms require installation of gambit other than pygambit. No decimal/rational payoffs in Python
+ - [Sage Math](https://doc.sagemath.org/html/en/reference/game_theory/sage/game_theory/normal_form_game.html): two players only
  - [GtNash](https://forgemia.inra.fr/game-theory-tools-group/gtnash/-/tree/main/)
+
+### Benchmarks
+
 
 ## Acknowledgements
 

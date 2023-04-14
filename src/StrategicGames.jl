@@ -138,6 +138,33 @@ julia> outer_product(vs)
 outer_product(vs)    = prod.(Iterators.product(vs...))
 outer_product(vs...) = prod.(Iterators.product(vs...))
 
+"""
+  batch(n,bsize;sequential=false,rng)
+
+Return a vector of `bsize` vectors of indeces from `1` to `n`.
+Randomly unless the optional parameter `sequential` is used.
+
+# Example:
+```julia
+julia> Utils.batch(6,2,sequential=true)
+3-element Array{Array{Int64,1},1}:
+ [1, 2]
+ [3, 4]
+ [5, 6]
+ ```
+"""
+function batch(n::Integer,bsize::Integer)
+    ridx = collect(1:n)
+    if bsize > n
+        return [ridx]
+    end
+    n_batches = Int64(floor(n/bsize))
+    batches = Array{Int64,1}[]
+    for b in 1:n_batches
+        push!(batches,ridx[b*bsize-bsize+1:b*bsize])
+    end
+    return batches
+end
 
 
 """
@@ -758,7 +785,6 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     eqs = NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}[]
 
     support_sizes = Matrix{Union{Int64,NTuple{nPlayers,Int64}}}(undef,nSupportSizes,3) # sum, diff, support sizes
-
     if allow_mixed
         i = 1
         for idx in CartesianIndices(nActions)
@@ -775,27 +801,66 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     end   
 
     for support_size in eachrow(support_sizes)
-        support_size = support_size[3]   
-        D = [combinations(1:nActions[n],support_size[n]) for n in 1:nPlayers]
-        for idx in CartesianIndices((length.(D)...,))
-            #println(idx)
-            S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
-            #println(S)
-            if all(isempty.(dominated_strategies(payoff,iterated=false,support=S)))
-                eq_test = nash_on_support(payoff,S,verbosity=verbosity)
-                if eq_test.solved
-                    eq = (equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=S)
-                    push!(eqs,eq)
-                    if verbosity > STD
-                        println("Eq #$(length(eqs))/$max_samples found: $eq")
-                    end
-                    if length(eqs) == max_samples
-                        return eqs
+        support_size = support_size[3]   # tuple of a specific set of support sizes
+        D = [combinations(1:nActions[n],support_size[n]) for n in 1:nPlayers] # vector for each player of its possible way to get the specific support size of actions for him out of all his possible nActions[n]
+        #println(D)
+
+        nSupportsToTest  = *(length.(D)...)
+        eq_still_to_find = Int(min(maxintfloat(Float64),max_samples)-length(eqs))
+        #eq_still_to_find = 0 # force single thread algo
+        
+        # This could be reunited using Floops: https://juliafolds.github.io/FLoops.jl/dev/tutorials/parallel/
+        # https://discourse.julialang.org/t/programming-pattern-for-when-you-want-thread-race/97457
+        if eq_still_to_find < nSupportsToTest # we go sequencing single trheading...
+            for idx in CartesianIndices((length.(D)...,))
+                #println(idx)
+                S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
+                #println(S)
+                if all(isempty.(dominated_strategies(payoff,iterated=false,support=S)))
+                    eq_test = nash_on_support(payoff,S,verbosity=verbosity)
+                    if eq_test.solved
+                        eq = (equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=S)
+                        push!(eqs,eq)
+                        if verbosity > STD
+                            println("Eq #$(length(eqs))/$max_samples found: $eq")
+                        end
+                        if length(eqs) == max_samples
+                            return eqs
+                        end
                     end
                 end
             end
-        end
-    end
+        else   # we run multithreaded code
+            eqs_ssize = Array{NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}}(undef,nSupportsToTest)
+            eqs_ssize_mask = fill(false, nSupportsToTest)
+            idxs_supports    = reshape([idx for idx in CartesianIndices((length.(D)...,))],nSupportsToTest)
+            Threads.@threads for i in 1:length(idxs_supports)
+                idx = idxs_supports[i]
+                # batch here min the number of eq remaining and the number of threads
+                #println(idx)
+                S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
+                #println(S)
+                if all(isempty.(dominated_strategies(payoff,iterated=false,support=S)))
+                    eq_test = nash_on_support(payoff,S,verbosity=verbosity)
+                    if eq_test.solved
+                        eq = (equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=S)
+                        eqs_ssize[i] = eq
+                        eqs_ssize_mask[i] = true
+                    end
+                end
+            end
+            eqs_ssize_final = eqs_ssize[eqs_ssize_mask]
+            if verbosity > STD
+                for (i,eq) in enumerate(eqs_ssize_final)
+                    println("Eq #$(length(eqs)+i)/$max_samples found: $eq")
+                end
+            end
+            append!(eqs,eqs_ssize_final)
+            if length(eqs) == max_samples
+                return eqs
+            end
+        end # mutithread case
+    end # end analysis of this support size
     return eqs
 end
 
