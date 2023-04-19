@@ -64,7 +64,7 @@ false
  - [GtNash](https://forgemia.inra.fr/game-theory-tools-group/gtnash/-/tree/main/)
 
 ### Benchmarks
-The following benchmarks have been run on a Interl Core 5 laptop on StrategicGames v0.0.3.
+The following benchmarks have been run on a Intel Core 5 laptop on StrategicGames v0.0.4.
 See [benchmarks/benchmarks_other_libraries.jl](/blob/main/benchmarks/benchmarks_other_libraries.jl) for details.
 
 | benchmark_name | library | method | time (ms) | memory (MB) | alloc | n eqs | notes |
