@@ -14,7 +14,6 @@ export Verbosity, NONE, LOW, STD, HIGH, FULL
 export expand_dimensions, unstack_payoff
 export expected_payoff
 export dominated_strategies, best_response, is_best_response, is_nash
-export nash_on_support
 export nash_cp, nash_se
 
 
@@ -435,7 +434,7 @@ Return (possibly one of many) best strategy and corrsponding expected payoff for
 - `payoff_array`: the N_players+1 dimensional array of payoffs
 - `strategy_profile`: the vector of vectors defining the strategies for the N players. The strategy for player n for which the best response is computed is used as initial values in the inner optimisation
 - `nplayer`: counter of the player for which we want to compute the best_response (e.g. 1 or 3)
-- `solver`: currently either "GLPK" or "HiGHS"
+- `solver`: currently either "GLPK" or "HiGHS" [default]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Returns:
@@ -694,6 +693,111 @@ function nash_on_support(payoff,support= collect.(range.(1,size(payoff)[1:end-1]
     return (status=status,equilibrium_strategies=optStrategies,expected_payoffs=optU,solved)
 end
 
+
+"""
+    nash_on_support_2p(payoff_array,support;init,verbosity)
+
+Find (if it exists) a Nash equilibrium for 2-players simultaneous games when mixed strategies are allowed on a specific support. This is a specialised 2-players version of the [`nash_on_support`](@ref) function.
+
+# Parameters
+- `payoff_array`: the 3 dimensional array of payoffs for the 2 players
+- `support`: vector of vector of action counts that are in the tested support for each player [def: full support]
+- `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action of the players]
+- `solver`: the linear solver to use. Currently only "HiGHS" [default] is supported, as "GLPK" seems to have problems as this function is multithreaded
+- `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
+
+# Notes
+- This implementation uses the JuMP modelling language with either the HiGHS solver engine
+
+# Returns
+- A named tuple with the following elements: `status`,`equilibrium_strategies`,`expected_payoffs`, `solved`
+
+# Example
+```julia
+julia> using StrategicGames
+julia> payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma. Only Nash eq is [[0,1],[0,1]]
+2×2 Matrix{Tuple{Int64, Int64}}:
+ (-1, -1)  (-3, 0)
+ (0, -3)   (-2, -2)
+julia> payoff_array = expand_dimensions(payoff);
+julia> nash_on_support2p(payoff_array,[[1,2],[1,2]]).solved # false
+false
+julia> nash_on_support2p(payoff_array,[[2],[2]]).solved     # true
+true
+```
+"""
+function nash_on_support_2p(payoff,support= collect.(range.(1,size(payoff)[1:end-1]));solver="HiGHS",verbosity=STD)  
+    #println("boo")
+    verbosity == FULL && println("Looking for NEq on support: $support")
+    nActions = size(payoff)[1:end-1]
+    nPlayers = size(payoff)[end]
+    nPlayers == 2 || error("This function works only for 2 players games")
+    (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
+    if isempty(support)
+        support = [collect(1:nActions[d]) for d in 1:length(nActions)]
+    end
+    init=[fill(1/size(payoff,1), size(payoff,1)),fill(1/size(payoff,2), size(payoff,2))]
+
+    m = Model(getfield(eval(Symbol(solver)),:Optimizer))
+    if solver == "HiGHS" && verbosity <= STD
+        set_optimizer_attribute(m, "output_flag", false)
+    end
+    @variables m begin
+        u[n in 1:2]
+    end
+    @variable(m, 0-eps() <= s1[j in 1:nActions[1] ] <= 1,  start=init[1][j])
+    @variable(m, 0-eps() <= s2[j in 1:nActions[2] ] <= 1,  start=init[2][j])
+    for Σ1 in setdiff(1:nActions[1],support[1])
+        fix(s1[Σ1], 0.0; force=true);
+    end
+    for Σ2 in setdiff(1:nActions[2],support[2])
+        fix(s2[Σ2], 0.0; force=true);
+    end
+
+    @constraints m begin
+        utility1_insupport[σ1 in support[1]], # the expected utility for each action in the support of player 1 must be constant
+            sum( payoff[σ1,j2,1] * s2[j2] for j2 in 1:nActions[2] )  == u[1]
+        utility1_outsupport[Σ1 in setdiff(1:nActions[1],support[1]) ], # the expected utility for each action not in the support of player 1 must be lower than the costant utility above
+            sum( payoff[Σ1,j2,1] * s2[j2] for j2 in 1:nActions[2] )  <= u[1]
+        utility2_insupport[σ2 in support[2]], # the expected utility for each action in the support of player 2 must be constant
+            sum( payoff[j1,σ2,2] * s1[j1] for j1 in 1:nActions[1] )  == u[2]
+        utility2_outsupport[Σ2 in setdiff(1:nActions[2],support[2])], # the expected utility for each action not in the support of player 2 must be lower than the costant utility above
+            sum( payoff[j1,Σ2,2] * s1[j1] for j1 in 1:nActions[1] )  <= u[2]
+        probabilities1,
+            sum(s1[j] for j in 1:nActions[1]) == 1
+        probabilities2,
+            sum(s2[j] for j in 1:nActions[2]) == 1
+    end
+
+    @objective m Max u[1] + u[2]
+
+    if verbosity == FULL
+        println("Optimisation model to be solved:")
+        println(m)
+    end
+    optimize!(m)
+    status = termination_status(m)
+
+    optStrategies = Vector{Vector{Float64}}()
+    optU          = Float64[]
+    solved = false
+    if (status in [MOI.OPTIMAL, MOI.LOCALLY_SOLVED, MOI.ALMOST_LOCALLY_SOLVED, MOI.ALMOST_OPTIMAL]) && has_values(m)
+        optStrategies1 = value.(s1)
+        optStrategies2 = value.(s2)
+        optStrategies = [optStrategies1,optStrategies2]
+        optU = value.(u)
+        solved = true
+    elseif (status in [MOI.LOCALLY_INFEASIBLE, MOI.INFEASIBLE, MOI.ALMOST_DUAL_INFEASIBLE, MOI.ALMOST_DUAL_INFEASIBLE,MOI.INFEASIBLE_OR_UNBOUNDED, MOI.DUAL_INFEASIBLE])
+        solved = false
+    else
+        if verbosity >= STD
+            warn("The feasibility check for support $support returned neither solved neither unsolved ($status). Returning no Nash equilibrium for this support.")
+        end
+        solved = false
+    end
+    return (status=status,equilibrium_strategies=optStrategies,expected_payoffs=optU,solved)
+end
+
 """
     nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
 
@@ -749,7 +853,8 @@ end
 
 function eq_on_support(payoff,S,verbosity)
     if all(isempty.(dominated_strategies(payoff,iterated=false,support=S))) # if there is even a single dominated strategy, this can not be a valid support for a Nash eq
-        eq_test = nash_on_support(payoff,S,verbosity=verbosity)
+        nPlayers = size(payoff)[end]
+        eq_test = (nPlayers == 2) ? nash_on_support_2p(payoff,S,verbosity=verbosity) : nash_on_support(payoff,S,verbosity=verbosity)
         if eq_test.solved
             eq = (equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=S)
             return eq

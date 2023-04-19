@@ -1,5 +1,5 @@
 using Test, StrategicGames
-import StrategicGames: outer_product, expected_value, nash_se2
+import StrategicGames: outer_product, expected_value, nash_se2, nash_on_support, nash_on_support_2p
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
 payoff_array = expand_dimensions(payoff_tuple)
@@ -128,12 +128,17 @@ U = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ] # head, roc
 payoff = expand_dimensions(U)
 @test nash_on_support(payoff,[[1,2,3],[1,2,3]]).solved == true
 @test nash_on_support(payoff,[[1,2],[1,2,3]]).solved == false
+@test nash_on_support_2p(payoff,[[1,2,3],[1,2,3]]).solved == true
+@test nash_on_support_2p(payoff,[[1,2],[1,2,3]]).solved == false
 
 U = [(-1,-1) (-3,0); (0, -3) (-2, -2)] # prisoner's dilemma. Only Nash eq is [[0,1],[0,1]]
 payoff = expand_dimensions(U)
 @test nash_on_support(payoff,[[1,2],[1,2]]).solved == false
 @test nash_on_support(payoff,[[1],[1]]).solved  == false
 @test nash_on_support(payoff,[[2],[2]]).solved  ==true
+@test nash_on_support_2p(payoff,[[1,2],[1,2]]).solved == false
+@test nash_on_support_2p(payoff,[[1],[1]]).solved  == false
+@test nash_on_support_2p(payoff,[[2],[2]]).solved  ==true
 
 payoff = expand_dimensions([(3,3) (3,2);
                             (2,2) (5,6);

@@ -21,7 +21,7 @@ julia> # Prisoner's dilemma (N players are also supported in all functions)
        payoff = [(-1,-1) (-3,  0);
                  ( 0,-3) (-2, -2)];
 julia> # From N-dimensional array of tuples to N+1 arrays of scalars    
-       payoff_array = expand_dimensions(U);
+       payoff_array = expand_dimensions(payoff);
 julia> # Find all the dominated strategies for the two players
        dominated_strategies(payoff_array)
 2-element Vector{Vector{Int64}}:
@@ -69,29 +69,29 @@ See [benchmarks/benchmarks_other_libraries.jl](/blob/main/benchmarks/benchmarks_
 
 | benchmark_name | library | method | time (ms) | memory (MB) | alloc | n eqs | notes |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
-| small_3x2 | StrategicGames | nash_se | 20.58 | 0.85 | 17694 | 3 |  |
+| small_3x2 | StrategicGames | nash_se | 3.43 | 0.55 | 17694 | 3 |  |
 | small_3x2 | GameTheory | hc_solve | 15.85 | 2.73 | 38255 | 3 |  |
 | small_3x2 | nashpy | vertex_enumeration | 21.78 |  |  | 3 |  |
 | small_3x2 | nashpy | lemke_howson_enumeration | 1.66 |  |  | 5 | repeated results |
 | small_3x2 | nashpy | support_enumeration | 2.68 |  |  | 3 |  |
 | small_3x2 | pygambit | lcp_solve | 0.58 |  |  | 3 |  |
 | small_3x2 | pygambit | ExternalEnumPolySolver | 2.84 |  |  | 3 |  |
-| rand_6x7 | StrategicGames | nash_se | 2039.13 | 383.73 | 7113996 | 1 |  |
+| rand_6x7 | StrategicGames | nash_se | 223.78 | 346.44 | 7113996 | 1 |  |
 | rand_6x7 | GameTheory | hc_solve | 24319.04 | 219.29 | 6639449 | 1 |  |
 | rand_6x7 | nashpy | vertex_enumeration | 483.39 |  |  | 1 |  |
 | rand_6x7 | nashpy | lemke_howson_enumeration | 10.20 |  |  | 13 | repeated results |
 | rand_6x7 | nashpy | support_enumeration | 1002.63 |  |  | 0 |  |
 | rand_6x7 | pygambit | lcp_solve | 8.61 |  |  | 1 |  |
 | rand_6x7 | pygambit | ExternalEnumPolySolver | 466356.13 |  |  | 1 |  |
-| rand_dec_6x5 | StrategicGames | nash_se | 621.12 | 72.96 | 1383871 | 3 |  |
+| rand_dec_6x5 | StrategicGames | nash_se | 61.64 | 61.19 | 1383871 | 3 |  |
 | rand_dec_6x5 | GameTheory | hc_solve | 2891.12 | 12.38 | 129350 | 3 |  |
 | rand_dec_6x5 | nashpy | vertex_enumeration | 115.39 |  |  | 3 |  |
 | rand_dec_6x5 | nashpy | lemke_howson_enumeration | 4.75 |  |  | 11 | repeated results |
 | rand_dec_6x5 | nashpy | support_enumeration | 247.32 |  |  | 3 |  |
-| rand_4x4x2 | StrategicGames | nash_se | 4332.14 | 68.48 | 1243570 | 7 | 1 eq repeated |
+| rand_4x4x2 | StrategicGames | nash_se | 2990.28 | 68.61 | 1243570 | 7 | 1 eq repeated |
 | rand_4x4x2 | GameTheory | hc_solve | 5085.48 | 14.03 | 163760 | 4 | 2 eq missing |
 | rand_4x4x2 | pygambit | ExternalEnumPolySolver | 924.56 |  |  | 5 | 1 eq missed |
-| rand_6x7_1st_eq | StrategicGames | nash_se | 31.57 | 4.26 | 81730 | 1 |  |
+| rand_6x7_1st_eq | StrategicGames | nash_se | 7.90 | 3.70 | 81730 | 1 |  |
 | rand_6x7_1st_eq | GameTheory | hc_solve | 20529.34 | 193.50 | 5212846 | 1 |  |
 | rand_6x7_1st_eq | nashpy | vertex_enumeration | 221.68 |  |  | 1 |  |
 | rand_6x7_1st_eq | nashpy | lemke_howson_enumeration | 0.83 |  |  | 1 |  |
