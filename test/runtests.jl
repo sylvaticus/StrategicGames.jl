@@ -1,5 +1,5 @@
 using Test, StrategicGames
-import StrategicGames: outer_product, expected_value, nash_se2, nash_on_support, nash_on_support_2p
+import StrategicGames: outer_product, expected_value, nash_se2, nash_on_support, nash_on_support_2p, check_domination_2p
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
 payoff_array = expand_dimensions(payoff_tuple)
@@ -62,6 +62,18 @@ payoff = expand_dimensions(u)
 @test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,2,4]]) == [[1,3],[4]]# without p2.a3 also p1.a1 become dominated
 @test dominated_strategies(payoff,support=[[1,2,3],[1,2,4]])                == [[1,3],[2,4]]# p2.a3 not deemed as dominated in inner loops as not in the domain
 
+payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
+payoff_array = expand_dimensions(payoff)
+@test check_domination_2p(payoff_array,1) == true
+@test check_domination_2p(payoff_array,2) == true
+payoff = [(-1,-1) (-3,0); (-4, -3) (-2, -2)]
+payoff_array = expand_dimensions(payoff)
+@test check_domination_2p(payoff_array,1) == false
+@test check_domination_2p(payoff_array,2) == true
+payoff = [(-1,-1) (-3,0); (-4, -3) (-2, -4)]
+payoff_array = expand_dimensions(payoff)
+@test check_domination_2p(payoff_array,1) == false
+@test check_domination_2p(payoff_array,2) == false
 
 #=
 # TODO: check why nash_cp() doesn't work with this one:
@@ -145,4 +157,12 @@ payoff = expand_dimensions([(3,3) (3,2);
                             (0,3) (6,1)]);
 eqs = nash_se(payoff,max_samples=Inf)
 @test length(eqs) == 3
+@test eqs[1].equilibrium_strategies ≈  [[1.0, -0.0, 0.0], [1.0, 0.0]]
+@test eqs[2].equilibrium_strategies ≈ [[0.8, 0.19999999999999998, 0.0], [0.6666666666666667, 0.3333333333333333]]
+@test eqs[3].equilibrium_strategies ≈  [[0.0, 0.33333333333333337, 0.6666666666666666],[0.33333333333333315, 0.6666666666666669]]
+
+eqs = nash_se2(payoff,max_samples=Inf)
+@test length(eqs) == 3
+@test eqs[1].equilibrium_strategies ≈  [[1.0, -0.0, 0.0], [1.0, 0.0]]
+@test eqs[2].equilibrium_strategies ≈ [[0.8, 0.19999999999999998, 0.0], [0.6666666666666667, 0.3333333333333333]]
 @test eqs[3].equilibrium_strategies ≈  [[0.0, 0.33333333333333337, 0.6666666666666666],[0.33333333333333315, 0.6666666666666669]]

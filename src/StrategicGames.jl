@@ -425,6 +425,30 @@ function dominated_strategies(payoff,player;support=[1:nA for nA in size(payoff)
     return dominated_strategies(payoff;strict=strict,support=support,iterated=false)[player]
 end
 
+function check_domination_2p(payoff,player)
+    nPlayers = size(payoff)[end]
+    nPlayers == 2 || error("This function supports only 2 players")
+    payoff_n = selectdim(payoff,nPlayers+1,player)
+    if player == 1
+        for r in eachrow(payoff_n)
+            for r2 in eachrow(payoff_n)
+                if all(r2 .> r) # r2 strictly dominates r1 
+                    return true
+                end
+            end
+        end
+    else
+        for c in eachcol(payoff_n)
+            for c2 in eachcol(payoff_n)
+                if all(c2 .> c) # c2 strictly dominates c1 
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 """
     best_response(payoff_array,strategy_profile,nplayer;solver)
 
@@ -831,14 +855,21 @@ function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     for support_size in eachrow(support_sizes)
         for S1 in combinations(1:nActions[1],support_size[3][1])
             A2 = setdiff(1:nActions[2],dominated_strategies(payoff[S1,:,:],2))
-            if !isempty(dominated_strategies(payoff[S1,A2,:],1))
+            #if !isempty(dominated_strategies(payoff[S1,A2,:],1))
+            #    continue
+            #end
+            if check_domination_2p(payoff[S1,A2,:],1)
                 continue
             end
+
             for S2 in combinations(A2,support_size[3][2])
-                if !isempty(dominated_strategies(payoff[S1,S2,:],1))
-                        continue
+                #if !isempty(dominated_strategies(payoff[S1,S2,:],1))
+                #        continue
+                #end
+                if check_domination_2p(payoff[S1,S2,:],1)
+                    continue
                 end
-                eq_test =  nash_on_support(payoff,[S1,S2],verbosity=verbosity)
+                eq_test =  nash_on_support_2p(payoff,[S1,S2],verbosity=verbosity)
                 if eq_test.solved
                         push!(eqs,(equilibrium_strategies=eq_test.equilibrium_strategies, expected_payoffs=eq_test.expected_payoffs,supports=[S1,S2]))
                         if length(eqs) == max_samples
