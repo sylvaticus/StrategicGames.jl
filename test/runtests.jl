@@ -166,3 +166,15 @@ eqs = nash_se2(payoff,max_samples=Inf)
 @test eqs[1].equilibrium_strategies ≈  [[1.0, -0.0, 0.0], [1.0, 0.0]]
 @test eqs[2].equilibrium_strategies ≈ [[0.8, 0.19999999999999998, 0.0], [0.6666666666666667, 0.3333333333333333]]
 @test eqs[3].equilibrium_strategies ≈  [[0.0, 0.33333333333333337, 0.6666666666666666],[0.33333333333333315, 0.6666666666666669]]
+
+# Degenerated game
+u = [(3,3) (3,3);
+     (2,2) (5,6);
+     (0,3) (6,1)]
+payoff = expand_dimensions(u)
+
+eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=true)
+@test length(eqs) == 3
+eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=false)
+@test length(eqs) == 4
+

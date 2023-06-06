@@ -274,6 +274,12 @@ function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff
         end
     end
 
+    # explicit complementarity constraint not supported by the IPOPT solver:
+    # @constraints m begin
+    #     slack[idx in idxSet], # either rₙⱼ or sₙⱼ must be zero
+    #     complements(r[idx],s[idx])
+    # end
+
     @NLconstraints m begin
         slack[idx in idxSet], # either rₙⱼ or sₙⱼ must be zero
             r[idx] * s[idx] == 0
@@ -896,7 +902,7 @@ function eq_on_support(payoff,S,verbosity)
 end    
 
 """
-    nash_se(payoff_array; allow_mixed=true, max_samples=1, verbosity=STD)
+    nash_se(payoff_array; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, verbosity=STD)
 
 Compute `max_samples` (default one) Nash equilibria for a N-players generic game in normal form using support enumeration method.
 
@@ -905,11 +911,12 @@ Compute `max_samples` (default one) Nash equilibria for a N-players generic game
 - `allow_mixed`: wether to look and report also mixed strategies (default) or look only for pure strategies (if any)
 - `max_samples`: number of found sample Nash equilibria needed to stop the algorithm [def: `1`]. Set it to `Inf` to look for all the possible isolated equilibria of the game
 - `mt`: wheter to use multithreads (def: `true`). Note that currently multithreading is always disable for a single eq search due to performance issues
+- `isolated_eq_only`: wheter to look only for isolated equilibria (def: true)
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
 - This function uses a support enumeration method to avoid the complementarity conditions and solve simpler problems conditional to a specific support.  More specifically we use the heuristic of [Porter-Nudelman-Shoham (2008)](https://doi.org/10.1016/j.geb.2006.03.015) and a dominance check, altought not recursively as in  [Turocy (2007)](https://web.archive.org/web/20230401080619/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36ba7977838df2bfdeab22157b0ed6ce940fb2be)
-- Given enought computational resources, all isolated Nash equilibria that are unique for a given support should be returned by this function 
+- To reduce computational costs, in 2 players game by default only (and all) existing isolated Nash equilibria that are unique for a given support are returned by this function. To retrieve a "sample" of equilbria that are not isolated but represent instead a continuum in degenerated games in two players games you can set `isolated_eq_only` option to false. This will allow the search to eq within supports of different sizes for the two players. This option is always false for more than 2 players.
 
 # Returns
 - A vector of named tuples (even for the default single `max_samples`) with the following information: `equilibrium_strategies`, `expected_payoffs`, `supports` 
@@ -927,20 +934,27 @@ julia> eqs = nash_se(payoff,max_samples=Inf)
  (equilibrium_strategies = [[0.0, 0.33333333333333337, 0.6666666666666666], [0.33333333333333315, 0.6666666666666669]], expected_payoffs = [4.000000000000001, 2.6666666666666665], supports = [[2, 3], [1, 2]])
 ```
 """
-function nash_se(payoff; allow_mixed=true, max_samples=1, mt=true, verbosity=STD)
+function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
-    nSupportSizes = allow_mixed ? prod(nActions) : 1
+    nSupportSizes = allow_mixed ? ( (nPlayers >2 || !isolated_eq_only) ? prod(nActions) : minimum(nActions) ) : 1
+    
     eqs = NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}[]
 
     mt = ( max_samples == 1 ) ? false : mt # as  mutithreaded for a single eq is currently very slow
 
     support_sizes = Matrix{Union{Int64,NTuple{nPlayers,Int64}}}(undef,nSupportSizes,3) # sum, diff, support sizes
     if allow_mixed
-        i = 1
-        for idx in CartesianIndices(nActions)
-            support_sizes[i,:] = [sum(Tuple(idx)),maximum(Tuple(idx))-minimum(Tuple(idx)),Tuple(idx)] 
-            i += 1
+        if nPlayers>2 || !isolated_eq_only
+            i = 1
+            for idx in CartesianIndices(nActions)
+                support_sizes[i,:] = [sum(Tuple(idx)),maximum(Tuple(idx))-minimum(Tuple(idx)),Tuple(idx)] 
+                i += 1
+            end
+        else
+            for i in 1:minimum(nActions)
+                support_sizes[i,:] = [i*nPlayers,0,(i,i)]
+            end
         end
     else
         support_sizes[1,:] = [nPlayers,0,(ones(Int64,nPlayers)...,)]

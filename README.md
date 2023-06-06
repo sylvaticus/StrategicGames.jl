@@ -65,7 +65,7 @@ false
 
 ### Benchmarks
 The following benchmarks have been run on a Intel Core 5 laptop on StrategicGames v0.0.4.
-See [benchmarks/benchmarks_other_libraries.jl](/blob/main/benchmarks/benchmarks_other_libraries.jl) for details.
+See [benchmarks/benchmarks_other_libraries.jl](/benchmarks/benchmarks_other_libraries.jl) for details.
 
 | benchmark_name | library | method | time (ms) | memory (MB) | alloc | n eqs | notes |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |

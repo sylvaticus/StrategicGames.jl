@@ -1,2 +1,3 @@
 [deps]
+StrategicGames = "21c4ae29-9918-4bcb-9542-b100d366d64c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
