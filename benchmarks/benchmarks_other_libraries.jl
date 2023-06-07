@@ -18,7 +18,7 @@ const pygambit = PyCall.pyimport("pygambit")
 
 # ------------------------------------------------------------------------------
 # Preliminary set up....
-bms = DataFrame(benchmark_name = String[], library = String[], method = String[], time = Float64[], memory = Union{Float64,Missing}[], alloc = Int64[], neqs = Int64[], notes=String[])
+bms = DataFrame(benchmark_name = String[], library = String[], method = String[], time = Float64[], memory = Union{Float64,Missing}[], alloc = Union{Int64,Missing}[], neqs = Int64[], notes=String[])
 
 macro binfo(bexpr)
     runexpr = quote
@@ -93,32 +93,32 @@ push!(bms,[game_name,"GameTheory","lrsnash",res..., neqs,""])
 eqs_gen = small_3x2_nash.vertex_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $small_3x2_nash.vertex_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","vertex_enumeration",res...,neqs,""])
 
 eqs_gen = small_3x2_nash.lemke_howson_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $small_3x2_nash.lemke_howson_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","lemke_howson_enumeration",res...,neqs,"repeated results"])
 
 eqs_gen = small_3x2_nash.support_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $small_3x2_nash.support_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","support_enumeration",res...,neqs,""])
 
 eqs = pygambit.nash.lcp_solve(small_3x2_gambit)
 neqs= length(eqs)
 res = @binfo pygambit.nash.lcp_solve(small_3x2_gambit)
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"pygambit","lcp_solve",res...,neqs,""])
 
 solver = pygambit.nash.ExternalEnumPolySolver()
 eqs = solver.solve(small_3x2_gambit)
 neqs= length(eqs)
 res = @binfo solver.solve(small_3x2_gambit)
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"pygambit","ExternalEnumPolySolver",res...,neqs,""])
 
 CSV.write("bms.csv",bms)
@@ -176,19 +176,19 @@ push!(bms,[game_name,"GameTheory","lrsnash",res..., neqs,""])
 eqs_gen = rand_6x7_nash.vertex_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $rand_6x7_nash.vertex_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","vertex_enumeration",res...,neqs,""])
 
 eqs_gen = rand_6x7_nash.lemke_howson_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $rand_6x7_nash.lemke_howson_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","lemke_howson_enumeration",res...,neqs,"repeated results"])
 
 eqs_gen = rand_6x7_nash.support_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $rand_6x7_nash.support_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","support_enumeration",res...,neqs,""])
 
 CSV.write("bms.csv",bms)
@@ -196,14 +196,15 @@ CSV.write("bms.csv",bms)
 eqs = pygambit.nash.lcp_solve(rand_6x7_gambit)
 neqs= length(eqs)
 res = @binfo pygambit.nash.lcp_solve(rand_6x7_gambit)
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"pygambit","lcp_solve",res...,neqs,""])
 
 solver = pygambit.nash.ExternalEnumPolySolver()
 eqs = solver.solve(rand_6x7_gambit) # takes a while !!!!
 neqs= length(eqs)
-res = @binfo solver.solve(rand_6x7_gambit) # takes even more !
-res[2] = missing; res[3] = missing
+#res = @binfo solver.solve(rand_6x7_gambit) # takes even more !
+#res = (res[1], missing, missing)
+res = (5.8840781273e11, missing, missing) # swap comments to run the test, takes ~ 2 hours on a good laptop
 push!(bms,[game_name,"pygambit","ExternalEnumPolySolver",res...,neqs,""])
 
 CSV.write("bms.csv",bms)
@@ -237,6 +238,7 @@ p2 = [
 payoff = cat(p1,p2,dims=3)
 rand_dec_6x5_StrategicGames = payoff
 rand_dec_6x5_GameTheory     = NormalFormGame(payoff)
+rand_dec_6x5_GameTheory_rat = NormalFormGame(Rational.(payoff))
 rand_dec_6x5_nash           = nash.Game(payoff[:,:,1], payoff[:,:,2])
 
 eqs  = nash_cp(rand_dec_6x5_StrategicGames)
@@ -248,7 +250,7 @@ eqs = nash_se(rand_dec_6x5_StrategicGames,max_samples=Inf)
 neqs = length(eqs)
 res = @binfo nash_se($rand_dec_6x5_StrategicGames,max_samples=Inf)
 push!(bms,[game_name,"StrategicGames","nash_se",res...,neqs,""])
-res[2] = missing; res[3] = missing
+
 eqs  = hc_solve(rand_dec_6x5_GameTheory)
 neqs = length(eqs)
 res  = @binfo hc_solve($rand_dec_6x5_GameTheory)
@@ -259,27 +261,27 @@ neqs = length(eqs)
 res  = @binfo support_enumeration($rand_dec_6x5_GameTheory)
 push!(bms,[game_name,"GameTheory","support_enumeration",res..., neqs,""])
 
-eqs  = lrsnash(rand_dec_6x5_GameTheory)
+eqs  = lrsnash(rand_dec_6x5_GameTheory_rat)
 neqs = length(eqs)
-res  = @binfo lrsnash($rand_dec_6x5_GameTheory)
+res  = @binfo lrsnash($rand_dec_6x5_GameTheory_rat)
 push!(bms,[game_name,"GameTheory","lrsnash",res..., neqs,""])
 
 eqs_gen = rand_dec_6x5_nash.vertex_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $rand_dec_6x5_nash.vertex_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","vertex_enumeration",res...,neqs,""])
 
 eqs_gen = rand_dec_6x5_nash.lemke_howson_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $rand_dec_6x5_nash.lemke_howson_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","lemke_howson_enumeration",res...,neqs,"repeated results"])
 
 eqs_gen = rand_dec_6x5_nash.support_enumeration(); eqs = [eq for eq in eqs_gen]
 neqs= length(eqs)
 res = @binfo begin eqs = $rand_dec_6x5_nash.support_enumeration(); [eq for eq in eqs] end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","support_enumeration",res...,neqs,""])
 
 CSV.write("bms.csv",bms)
@@ -317,7 +319,7 @@ solver = pygambit.nash.ExternalEnumPolySolver()
 eqs = solver.solve(rand_4x4x2_gambit)
 neqs= length(eqs)
 res = @binfo solver.solve(rand_4x4x2_gambit)
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"pygambit","ExternalEnumPolySolver",res...,neqs,"1 eq missed"])
 
 CSV.write("bms.csv",bms)
@@ -363,20 +365,20 @@ push!(bms,[game_name,"GameTheory","hc_solve",res..., neqs,""])
 eqs_gen = rand_6x7_nash.vertex_enumeration(); eqs = py"next($eqs_gen)"
 neqs= 1
 res = @binfo begin eqs = $rand_6x7_nash.vertex_enumeration(); py"next($eqs)" end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","vertex_enumeration",res...,neqs,""])
 
 eqs_gen = rand_6x7_nash.lemke_howson_enumeration(); eqs = py"next($eqs_gen)"
 neqs= 1
 res = @binfo begin eqs = $rand_6x7_nash.lemke_howson_enumeration(); py"next($eqs)" end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","lemke_howson_enumeration",res...,neqs,""])
 
 eqs_gen = rand_6x7_nash.support_enumeration();
 # eqs = py"next($eqs_gen)"
 neqs= 0
 res = @binfo begin eqs = $rand_6x7_nash.support_enumeration(); end
-res[2] = missing; res[3] = missing
+res = (res[1], missing, missing)
 push!(bms,[game_name,"nashpy","support_enumeration",res...,neqs,"no eq reported"])
 
 CSV.write("bms.csv",bms)
