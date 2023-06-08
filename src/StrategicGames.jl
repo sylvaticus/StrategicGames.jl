@@ -8,7 +8,7 @@ Convenient functions ([`expand_dimensions`](@ref) and [`unstack_payoff`](@ref)) 
 """
 module StrategicGames
 
-using LinearAlgebra, Combinatorics, JuMP, Ipopt, GLPK, HiGHS
+using LinearAlgebra, Combinatorics, JuMP, Ipopt, GLPK, HiGHS,  PrecompileTools
 
 export Verbosity, NONE, LOW, STD, HIGH, FULL
 export expand_dimensions, unstack_payoff
@@ -1052,6 +1052,6 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
     return eqs
 end
 
-
+include("Precompilation.jl") 
 
 end # module StrategicGames

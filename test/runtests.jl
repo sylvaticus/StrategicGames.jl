@@ -178,3 +178,4 @@ eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=true)
 eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=false)
 @test length(eqs) == 4
 
+
