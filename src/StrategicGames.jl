@@ -397,7 +397,7 @@ Dominated strategies at step 5: [[3, 1], [3, 1]]
  [3, 1]
 ```
 """
-function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],support=[1:nA for nA in size(payoff)[1:end-1]],verbosity=STD,iteration=1)
+function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],support=[1:nA for nA in size(payoff)[1:end-1]],iteration=1,allow_mixed=true,tol=1e-06,solver="HiGHS",verbosity=STD)
 
     #println(support)
     nActions      = size(payoff)[1:end-1]
@@ -423,23 +423,30 @@ function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] f
         for i in support[n] # we check only actions in the support
             #println("i: $i")
             i in dominated_n && continue # we don't check this action, it is already deemed as dominated
-            ai = selectdim(payoff_n,n,i) # action to test 
-            maski         = .! selectdim(mask_n,n,i)
-            maski_support = .! selectdim(mask_support_n,n,i)
-            for j in 1:nActions[n] # we check for any possible dominating action, even outside support
-                #println("j: $j")
-                i != j || continue
-                maskj         = .! selectdim(mask_n,n,j)
-                #maskj_support =  selectdim(mask_support_n,n,j) # as this action to check may be outside support, maskj_support could be all false
-                j in dominated_n && continue # we don't check this action, it is already deemed as dominated
-                maski == maskj || error("Maski should always be equal to maskj!\n$maski \n$maskj")
-                aj = selectdim(payoff_n,n,j)           
-                check_dominated = strict ? ( (aj .> ai) .|| maski .|| maski_support ) : (aj .>= ai .|| maski .|| maski) # we don't care if action j is not higher than action i for other player actions that are dominated or not in the support
-                if all(check_dominated)
+            if allow_mixed == true
+                if is_mixdominated(payoff_n,n,i,dominated=dominated, support=support, solver=solver, tol=tol, strict=strict, verbosity=verbosity)
                     push!(dominated_n,i)
                     new_dominated = true
-                    break
                 end 
+            else
+                ai = selectdim(payoff_n,n,i) # action to test 
+                maski         = .! selectdim(mask_n,n,i)
+                maski_support = .! selectdim(mask_support_n,n,i)
+                for j in 1:nActions[n] # we check for any possible dominating action, even outside support
+                    #println("j: $j")
+                    i != j || continue
+                    maskj         = .! selectdim(mask_n,n,j)
+                    #maskj_support =  selectdim(mask_support_n,n,j) # as this action to check may be outside support, maskj_support could be all false
+                    j in dominated_n && continue # we don't check this action, it is already deemed as dominated
+                    maski == maskj || error("Maski should always be equal to maskj!\n$maski \n$maskj")
+                    aj = selectdim(payoff_n,n,j)           
+                    check_dominated = strict ? ( (aj .> ai) .|| maski .|| maski_support ) : (aj .>= ai .|| maski .|| maski) # we don't care if action j is not higher than action i for other player actions that are dominated or not in the support
+                    if all(check_dominated)
+                        push!(dominated_n,i)
+                        new_dominated = true
+                        break
+                    end 
+                end
             end
         end
         #dominated[n] = dominated_n # maybe not even needed 
@@ -449,13 +456,13 @@ function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] f
         println("Dominated strategies at step $iteration: $dominated")
     end
     if (new_dominated && iterated)
-        return dominated_actions(payoff,strict=strict,iterated=true,dominated=dominated,support=support,verbosity=verbosity,iteration=iteration+1)
+        return dominated_actions(payoff,strict=strict,iterated=true,dominated=dominated,support=support,allow_mixed=allow_mixed,tol=tol,solver=solver,verbosity=verbosity,iteration=iteration+1)
     else
         return dominated
     end
 end
-function dominated_actions(payoff,player;support=[1:nA for nA in size(payoff)[1:end-1]],strict=true)
-    return dominated_actions(payoff;strict=strict,support=support,iterated=false)[player]
+function dominated_actions(payoff,player;support=[1:nA for nA in size(payoff)[1:end-1]],strict=true, allow_mixed=true,tol=1e-06,solver="HiGHS",verbosity=STD)
+    return dominated_actions(payoff;strict=strict,support=support,iterated=false, allow_mixed=allow_mixed,tol=tol,solver=solver,verbosity=verbosity)[player]
 end
 
 """
@@ -463,6 +470,7 @@ Solver: "HiGHS", "Ipopt", "GLPK"
 """
 function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 1:ndims(payoff_n)], support=[1:nA for nA in size(payoff_n)], solver="HiGHS", tol =1e-06, strict=true, verbosity=STD)
  
+
     if action in dominated[player]
         return true
     end
@@ -471,10 +479,13 @@ function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 
     payoff_n_res = restrict_payoff(payoff_n,player,dominated=dominated,support=support)
 
     action = action - sum(dominated[player] .< action)
-
     nActions = size(payoff_n_res)
+   
     #nPlayers = ndims(payoff_n_res)
     nActions_player = nActions[player]
+    if(nActions_player == 1)
+        return false # only action can't be dominated
+    end
 
     oth_actions   = setdiff(1:nActions_player,action)
     payoff_n_a    = selectdim(payoff_n_res,player,action)
@@ -502,20 +513,28 @@ function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 
     end
 
     @objective m Min dist 
-
-    optimize!(m)
-    optDist = value.(dist)
-    ps = value.(p)
-    #println("optDist: ", optDist)
-    #println("p: ", ps)
-
-    if strict
-        return (optDist < -tol )
-    else
-        return optDist <= 0.0+eps()
+    if verbosity >= FULL
+        print(m)
     end
+    optimize!(m)
 
-    
+    status = termination_status(m)
+    if !(status in [MOI.OPTIMAL, MOI.LOCALLY_SOLVED, MOI.ALMOST_LOCALLY_SOLVED, MOI.ALMOST_OPTIMAL]) || ! has_values(m)
+        @error("Error in computing dominance check at player $player")
+        return false
+    else
+        optDist = value.(dist)
+        ps = value.(p)
+        if verbosity >= FULL
+            println("optDist: ", optDist)
+            println("p: ", ps)
+        end
+        if strict
+            return (optDist < -tol )
+        else
+            return optDist <= 0.0+eps()
+        end
+    end
 end
 
 function check_domination_2p(payoff,player)

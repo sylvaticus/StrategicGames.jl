@@ -39,6 +39,7 @@ u = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
      (4,6,4) (2,7,6) (4,2,4); (3,7,2) (4,5,2) (0,4,3);;;]
 payoff = expand_dimensions(u)
+dominated_actions(payoff,2,strict=false,allow_mixed=false)
 @test dominated_actions(payoff,2,strict=false) == [3]
 @test dominated_actions(payoff,strict=false,iterated=false) == [[],[3],[1]]
 
@@ -55,11 +56,11 @@ u = [(1,1) (-1,2) (5,0) (1,1);
      (1,1) ( 0,5) (1,7) (0,1)]
 payoff = expand_dimensions(u)
 
-@test dominated_actions(payoff,iterated=false)                           == [[3],[4]]
+@test dominated_actions(payoff,iterated=false,allow_mixed=false)                           == [[3],[4]]
 @test dominated_actions(payoff)                                          == [[1,3],[2,3,4]]
-@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,3,4]]) == [[3],[4]] # p2.a4 remains dominated by p2.a.2 even if it is not in the support 
-@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,2,3]]) == [[3],[]] # p2.a4 is not checked for domination as not inthe support
-@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,2,4]]) == [[1,3],[4]]# without p2.a3 also p1.a1 become dominated
+@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,3,4]], allow_mixed=false) == [[3],[4]] # p2.a4 remains dominated by p2.a.2 even if it is not in the support 
+@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,2,3]], allow_mixed=false) == [[3],[]] # p2.a4 is not checked for domination as not inthe support
+@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,2,4]], allow_mixed=false) == [[1,3],[4]]# without p2.a3 also p1.a1 become dominated
 @test dominated_actions(payoff,support=[[1,2,3],[1,2,4]])                == [[1,3],[2,4]]# p2.a3 not deemed as dominated in inner loops as not in the domain
 
 payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
@@ -218,3 +219,10 @@ support = [[1,2],[3],[1,2]]
 
 dominated = [[2],[3],[]]
 @test is_mixdominated(payoff_n,2,2,strict=true,support=support, dominated=dominated) == false
+
+
+payoff = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
+
+payoff_array = expand_dimensions(payoff);
+dominated_player2 = StrategicGames.dominated_actions(payoff_array,2)
+dominated = StrategicGames.dominated_actions(payoff_array,verbosity=HIGH)
