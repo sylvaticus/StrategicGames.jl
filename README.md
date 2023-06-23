@@ -23,7 +23,7 @@ julia> # Prisoner's dilemma (N players are also supported in all functions)
 julia> # From N-dimensional array of tuples to N+1 arrays of scalars    
        payoff_array = expand_dimensions(payoff);
 julia> # Find all the dominated strategies for the two players
-       dominated_strategies(payoff_array)
+       dominated_actions(payoff_array)
 2-element Vector{Vector{Int64}}:
  [1]
  [1]

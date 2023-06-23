@@ -87,7 +87,7 @@ julia> # Pay-off matrix
 julia> # From N-dimensional array of tuples to N+1 arrays of scalars    
        payoff_array = expand_dimensions(U);
 julia> # Find all the dominated strategies for the two players
-       dominated_strategies(payoff_array)
+       dominated_actions(payoff_array)
 2-element Vector{Vector{Int64}}:
  [1]
  [1]

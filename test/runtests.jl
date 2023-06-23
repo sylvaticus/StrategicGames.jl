@@ -32,22 +32,22 @@ p = -1 + sqrt(10)/2
 StrategicGames.is_nash(payoff_array,eq_strategies)
 
 
-# Testing dominated_strategies
+# Testing dominated_actions
 u = expand_dimensions([(3,4) (1,5) (6,2); (2,6) (3,7) (1,7)])
-@test dominated_strategies(u,2,strict=true) == [1]
-@test dominated_strategies(u,2,strict=false) == [1,3]
+@test dominated_actions(u,2,strict=true) == [1]
+@test dominated_actions(u,2,strict=false) == [1,3]
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
      (4,6,4) (2,7,6) (4,2,4); (3,7,2) (4,5,2) (0,4,3);;;]
 payoff = expand_dimensions(u)
-@test dominated_strategies(payoff,2,strict=false) == [3]
-@test dominated_strategies(payoff,strict=false,iterated=false) == [[],[3],[1]]
+@test dominated_actions(payoff,2,strict=false) == [3]
+@test dominated_actions(payoff,strict=false,iterated=false) == [[],[3],[1]]
 
-@test dominated_strategies(payoff,strict=true,iterated=true) == [[],[3],[1]]
+@test dominated_actions(payoff,strict=true,iterated=true) == [[],[3],[1]]
 
 # from https://www.youtube.com/watch?v=Pp5cF4RWuU0 :
 u = [(13.0,3.0) (1.0,4.0) (7.0,3.0); (4.0,1.0) (3.0,3.0) (6.0,2.0); (-1.0,9.0) (2.0,8.0) (8.0,-1.0)]
 payoff = expand_dimensions(u)
-@test dominated_strategies(payoff,strict=true,iterated=true) == [[1,3],[1,3]] 
+@test dominated_actions(payoff,strict=true,iterated=true) == [[1,3],[1,3]] 
 
 # from https://www.youtube.com/watch?v=ErJNYh8ejSA : 
 u = [(1,1) (-1,2) (5,0) (1,1);
@@ -55,12 +55,12 @@ u = [(1,1) (-1,2) (5,0) (1,1);
      (1,1) ( 0,5) (1,7) (0,1)]
 payoff = expand_dimensions(u)
 
-@test dominated_strategies(payoff,iterated=false)                           == [[3],[4]]
-@test dominated_strategies(payoff)                                          == [[1,3],[2,3,4]]
-@test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,3,4]]) == [[3],[4]] # p2.a4 remains dominated by p2.a.2 even if it is not in the support 
-@test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,2,3]]) == [[3],[]] # p2.a4 is not checked for domination as not inthe support
-@test dominated_strategies(payoff,iterated=false,support=[[1,2,3],[1,2,4]]) == [[1,3],[4]]# without p2.a3 also p1.a1 become dominated
-@test dominated_strategies(payoff,support=[[1,2,3],[1,2,4]])                == [[1,3],[2,4]]# p2.a3 not deemed as dominated in inner loops as not in the domain
+@test dominated_actions(payoff,iterated=false)                           == [[3],[4]]
+@test dominated_actions(payoff)                                          == [[1,3],[2,3,4]]
+@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,3,4]]) == [[3],[4]] # p2.a4 remains dominated by p2.a.2 even if it is not in the support 
+@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,2,3]]) == [[3],[]] # p2.a4 is not checked for domination as not inthe support
+@test dominated_actions(payoff,iterated=false,support=[[1,2,3],[1,2,4]]) == [[1,3],[4]]# without p2.a3 also p1.a1 become dominated
+@test dominated_actions(payoff,support=[[1,2,3],[1,2,4]])                == [[1,3],[2,4]]# p2.a3 not deemed as dominated in inner loops as not in the domain
 
 payoff = [(-1,-1) (-3,0); (0, -3) (-2, -2)]
 payoff_array = expand_dimensions(payoff)
@@ -179,3 +179,42 @@ eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=false)
 @test length(eqs) == 4
 
 
+# Testing restrict_payoff...
+import StrategicGames:restrict_payoff
+nActions  = (5,4,5)
+player    = 2
+dominated = [[2,3],[1,2],[1]]
+support   = [[1,3,4,5],[2,3],[1,2,3]]
+payoff_n  = reshape(1:prod(nActions), nActions)
+
+restricted = restrict_payoff(payoff_n,2,dominated=dominated,support=support)
+@test restricted[:,:,1] == [31 36; 34 39; 35 40]
+
+# Testing is_mixdominated
+import StrategicGames:is_mixdominated
+u = [(3,1) (0,1);
+     (9/4,1) (1,1);
+     (0,1) (4,1)]
+payoff= expand_dimensions(u)
+player=1
+payoff_n = selectdim(payoff,ndims(payoff),player)
+@test is_mixdominated(payoff_n,1,2,strict=true) == false
+@test is_mixdominated(payoff_n,1,2,strict=false) == true
+payoff_n[2,1] = 9/4 + 0.01
+@test is_mixdominated(payoff_n,1,2) == false
+payoff_n[2,1] = 9/4 - 0.1
+@test is_mixdominated(payoff_n,1,2) == true
+
+u = [(1,3,2) (2,2.24,2) (2,0,3);  (2,0,3) (2,1,3) (2,4,1);;; (2,0,1) (3,1,3) (2,4,2); (1,3,3) (2,1,3) (1,4,0)]
+payoff= expand_dimensions(u)
+player=2
+payoff_n = selectdim(payoff,ndims(payoff),player)
+@test is_mixdominated(payoff_n,2,2,strict=true) == true
+
+dominated = [[2],[3],[2]]
+support = [[1,2],[3],[1,2]]
+@test is_mixdominated(payoff_n,2,2,strict=true,support=support) == true
+@test is_mixdominated(payoff_n,2,2,strict=true,support=support, dominated=dominated) == true
+
+dominated = [[2],[3],[]]
+@test is_mixdominated(payoff_n,2,2,strict=true,support=support, dominated=dominated) == false

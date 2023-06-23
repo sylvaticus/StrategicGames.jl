@@ -21,7 +21,7 @@ $ python3 -m pip install --user juliacall
 (status = MathOptInterface.LOCALLY_SOLVED, equilibrium_strategies = [[0.0, 0.9999999887780999], [0.0, 0.9999999887780999]], expected_payoffs = [-1.9999999807790678, -1.9999999807790678])
 >>> sg.is_nash(payoff,eq.equilibrium_strategies)
 True
->>> sg.dominated_strategies(payoff)
+>>> sg.dominated_actions(payoff)
 <jl [[1], [1]]>
 ```
 
@@ -84,7 +84,7 @@ We can now call StrategicGames functions as we would do for any other Python lib
 <PyCall.jlwrap (status = MathOptInterface.LOCALLY_SOLVED, equilibrium_strategies = [[0.0, 0.9999999887780999], [0.0, 0.9999999887780999]], expected_payoffs = [-1.9999999807790678, -1.9999999807790678])
 >>> StrategicGames.is_nash(payoff,eq.equilibrium_strategies)
 True
->>> StrategicGames.dominated_strategies(payoff)
+>>> StrategicGames.dominated_actions(payoff)
 [array([1], dtype=int64), array([1], dtype=int64)]
 ```
 
@@ -148,7 +148,7 @@ We can now call StrategicGames functions as we would do for any other Python lib
 (status = MathOptInterface.LOCALLY_SOLVED, equilibrium_strategies = [[0.0, 0.9999999887780999], [0.0, 0.9999999887780999]], expected_payoffs = [-1.9999999807790678, -1.9999999807790678])
 >>> sg.is_nash(payoff,eq.equilibrium_strategies)
 True
->>> sg.dominated_strategies(payoff)
+>>> sg.dominated_actions(payoff)
 <jl [[1], [1]]>
 
 ```
@@ -199,7 +199,7 @@ Julia Object of type NamedTuple{(:status, :equilibrium_strategies, :expected_pay
 [1] 0 1
 > julia_call("is_nash",payoff,equilibrium_strategies)
 [1] TRUE
-> julia_call("dominated_strategies",payoff)
+> julia_call("dominated_actions",payoff)
 Julia Object of type Vector{Vector{Int64}}.
 [[1], [1]]
 ```
@@ -249,7 +249,7 @@ Julia Object of type NamedTuple{(:status, :equilibrium_strategies, :expected_pay
 [1] 0 1
 > julia_call("is_nash",payoff,equilibrium_strategies)
 [1] TRUE
-> julia_call("dominated_strategies",payoff)
+> julia_call("dominated_actions",payoff)
 Julia Object of type Vector{Vector{Int64}}.
 [[1], [1]]
 ```

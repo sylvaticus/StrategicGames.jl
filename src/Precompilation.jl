@@ -13,6 +13,6 @@
         nash_se(payoff2)
         nash_se(payoff3)
         is_nash(payoff2,[[1,0],[0,1]])
-        dominated_strategies(payoff3,iterated=true)
+        dominated_actions(payoff3,iterated=true)
     end
 end
