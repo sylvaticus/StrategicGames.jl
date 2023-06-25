@@ -216,14 +216,17 @@ Find a Nash Equilibrium for N-players simultaneous games when mixed strategies a
 # Parameters
 - `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
 - `init`: a vector of vector of mixed strategies (i.e. PMFs) for each players to start the algorithm with. Different init points may reach different equilibrium points [def: equal probabilities for each available action of the players]
-- `strict_domination_removal`: wether to remove only strictly dominated strategies in the pre-optimisation or also weakly dominated ones [def: `true`]
+- `domrem_strict`: wheter to look for strictly dominated actions in the presolver [def: `true`]
+- `domrem_mixedactions`: wheter to look only for dominating pure actions (cheap) or look also to any possible mixed action domination (require solving a linear programming problem) [def: `true`]
+- `domrem_tol`: tollerance for the optimization problem of dominated actions removal. Used only if `domrem_mixedactions` is `true`. [def: 1e-08]
+- `domrem_solver`: the solver to use for the optimization problem of dominated action removal, either "HiGHS", "GLPK" or "Ipopt". Used only if `domrem_mixedactions` is `true` [def: "HiGHS"]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
 - This function uses a complementarity formulation. For N <= 2 the problem, except the complementarity equation, is linear and known as LCP (Linear Complementarity Problem)
 - This implementation uses the JuMP modelling language with the Ipopt solver engine (and hence it uses an interior point method instead of the pivotal approach used in the original Lemke-Howson [1964] algorithm)
 - There is no guarantee on timing and even that the algorithm converge to an equilibrium. Different Nash equilibriums may be reached by setting different initial points
-- By default the iterative removal of dominated strategies concerns only _strictly_ dominated ones. For some games where the algorithm doesn't find a Nash equilibrium, you can often get success setting the algorithm to remove also weakly dominated strategies. 
+- By default the iterative removal of dominated strategies concerns only _strictly_ dominated ones. For some games where the algorithm doesn't computationally find a Nash equilibrium, you can often get success setting the algorithm to remove also weakly dominated actions, altought the opposite is also true and removing weackly dominated actions may lead to removing a Nash equilibrium.
 
 # Returns
 - A named tuple with the following elements: `status`,`equilibrium_strategies`,`expected_payoffs`
@@ -242,12 +245,15 @@ julia> eq_strategies = eq.equilibrium_strategies
  [-4.0497525691839856e-11, 1.0000000000404976]
 ```
 """
-function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],verbosity=STD,ϵ=0.0,strict_domination_removal=true)  
+function nash_cp(payoff;allow_mixed=true,init=[fill(1/size(payoff,d),size(payoff,d)) for d in 1:ndims(payoff)-1],ϵ=0.0,domrem_strict=true,domrem_mixedactions=true, domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)  
+
+    dominated = dominated_actions(payoff,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity) # this is used by fixing the value of the variable to zero in the optimization 
+    
     nActions = size(payoff)[1:end-1]
+
+    #println(respayoff)
     nPlayers = size(payoff)[end]
     (length(nActions) == nPlayers) || error("Mismatch dimension or size between the payoff array and the number of players")
-
-    dominated = dominated_actions(payoff,strict=strict_domination_removal) # TODO: this is not used !!!!
 
     # Vector of 2-elements tuples where the first one is the player index and the second one is the action index
     # We specify it as a vector of tuples as the number of actions can be different for the different players
@@ -356,15 +362,41 @@ function restrict_payoff(payoff_n, player;dominated=[Int64[] for n in 1:ndims(pa
 end
 
 """
-    dominated_actions(payoff;strict=true,iterated=true,dominated,support,verbosity)
+    restrict_payoff(payoff;dominated)
+"""
+function restrict_payoff(payoff::AbstractArray{T}; dominated=[Int64[] for n in 1:ndims(payoff)]) where {T}
+    # First we compute the final size of the restricerd payoff, then we create an empty one and finally we fill it slice by slice
+    println(T)
+    nPlayers = size(payoff)[end]
+    sizevec = zeros(Int64,nPlayers+1)
+    for n in 1:nPlayers
+        sn = length(setdiff(1:size(payoff,n),dominated[n]))
+        sizevec[n] = sn
+    end
+    sizevec[end] = nPlayers
+    respayoff = zeros(T,sizevec...)
 
-Implements the "Iterated [by default] Removal of Strictly [by default] Dominated Strategies" (IRSDS) algorithm, returning a vector (for each player) of vectors (action positions) of actions that for a given player are dominates by at least one of his other actions. This function is iterative (recursive) by default.
+    for n in 1:nPlayers
+        payoff_n = selectdim(payoff,nPlayers+1,n)
+        selectdim(respayoff,nPlayers+1,n) .= restrict_payoff(payoff_n, n;dominated=dominated)
+    end
+    return respayoff
+
+end
+
+"""
+    dominated_actions(payoff;iterated=true,domrem_strict,domrem_mixedactions,domrem_tol,domrem_solver,verbosity)
+
+Implements the "Iterated [by default] Removal of Strictly [by default] Dominated Strategies" (IRSDS) algorithm, returning a vector (for each player) of vectors (action positions) of actions that for a given player are dominates by at least one of his other actions or by a mixture. This function is iterative (recursive) by default.
 
 # Parameters
-- `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
-- `strict`: wheter to look for strictly dominated actions [def: `true`]
+- `payoff`: the Nplayers+1 dimensional array of payoffs for the N players
+- `domrem_strict`: wheter to look for strictly dominated actions [def: `true`]
+- `domrem_strict`: wheter to look for strictly dominated actions [def: `true`]
+- `domrem_mixedactions`: wheter to look only for dominating pure actions (cheap) or look also to any possible mixed action domination (require solving a linear programming problem) [def: `true`]
+- `domrem_tol`: tollerance for the optimization problem. Used only if `domrem_mixedactions` is `true`. [def: 1e-08]
+- `domrem_solver`: the solver to use for the optimization problem, either "HiGHS", "GLPK" or "Ipopt". Used only if `domrem_mixedactions` is `true` [def: "HiGHS"]
 - `iterated`: wheter to look for dominated actions iteractively [def: `true`]
-
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 
@@ -397,7 +429,7 @@ Dominated strategies at step 5: [[3, 1], [3, 1]]
  [3, 1]
 ```
 """
-function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],support=[1:nA for nA in size(payoff)[1:end-1]],iteration=1,allow_mixed=true,tol=1e-06,solver="HiGHS",verbosity=STD)
+function dominated_actions(payoff;iterated=true,dominated=[Int64[] for n in 1:size(payoff)[end]],support=[1:nA for nA in size(payoff)[1:end-1]],iteration=1, domrem_strict=true,domrem_mixedactions=true, domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
 
     #println(support)
     nActions      = size(payoff)[1:end-1]
@@ -423,8 +455,8 @@ function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] f
         for i in support[n] # we check only actions in the support
             #println("i: $i")
             i in dominated_n && continue # we don't check this action, it is already deemed as dominated
-            if allow_mixed == true
-                if is_mixdominated(payoff_n,n,i,dominated=dominated, support=support, solver=solver, tol=tol, strict=strict, verbosity=verbosity)
+            if domrem_mixedactions == true
+                if is_mixdominated(payoff_n,n,i,dominated=dominated, support=support, domrem_strict=domrem_strict, domrem_tol=domrem_tol,domrem_solver=domrem_solver, verbosity=verbosity)
                     push!(dominated_n,i)
                     new_dominated = true
                 end 
@@ -440,7 +472,7 @@ function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] f
                     j in dominated_n && continue # we don't check this action, it is already deemed as dominated
                     maski == maskj || error("Maski should always be equal to maskj!\n$maski \n$maskj")
                     aj = selectdim(payoff_n,n,j)           
-                    check_dominated = strict ? ( (aj .> ai) .|| maski .|| maski_support ) : (aj .>= ai .|| maski .|| maski) # we don't care if action j is not higher than action i for other player actions that are dominated or not in the support
+                    check_dominated = domrem_strict ? ( (aj .> ai) .|| maski .|| maski_support ) : (aj .>= ai .|| maski .|| maski) # we don't care if action j is not higher than action i for other player actions that are dominated or not in the support
                     if all(check_dominated)
                         push!(dominated_n,i)
                         new_dominated = true
@@ -456,19 +488,19 @@ function dominated_actions(payoff;strict=true,iterated=true,dominated=[Int64[] f
         println("Dominated strategies at step $iteration: $dominated")
     end
     if (new_dominated && iterated)
-        return dominated_actions(payoff,strict=strict,iterated=true,dominated=dominated,support=support,allow_mixed=allow_mixed,tol=tol,solver=solver,verbosity=verbosity,iteration=iteration+1)
+        return dominated_actions(payoff,iterated=true,dominated=dominated,support=support,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity,iteration=iteration+1)
     else
         return dominated
     end
 end
-function dominated_actions(payoff,player;support=[1:nA for nA in size(payoff)[1:end-1]],strict=true, allow_mixed=true,tol=1e-06,solver="HiGHS",verbosity=STD)
-    return dominated_actions(payoff;strict=strict,support=support,iterated=false, allow_mixed=allow_mixed,tol=tol,solver=solver,verbosity=verbosity)[player]
+function dominated_actions(payoff,player;support=[1:nA for nA in size(payoff)[1:end-1]],domrem_strict=true,domrem_mixedactions=true, domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
+    return dominated_actions(payoff;support=support,iterated=false, domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity)[player]
 end
 
 """
 Solver: "HiGHS", "Ipopt", "GLPK"
 """
-function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 1:ndims(payoff_n)], support=[1:nA for nA in size(payoff_n)], solver="HiGHS", tol =1e-06, strict=true, verbosity=STD)
+function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 1:ndims(payoff_n)], support=[1:nA for nA in size(payoff_n)], domrem_tol=1e-06,domrem_solver="HiGHS", domrem_strict=true, verbosity=STD)
  
 
     if action in dominated[player]
@@ -493,15 +525,15 @@ function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 
 
     nOthActions = length(oth_actions)
 
-    m = Model(getfield(eval(Symbol(solver)),:Optimizer))
+    m = Model(getfield(eval(Symbol(domrem_solver)),:Optimizer))
     if verbosity <= STD
-        solver == "HiGHS" && set_optimizer_attribute(m, "output_flag", false)
-        solver == "Ipopt" && set_optimizer_attribute(m, "print_level", 0)
-        solver == "GLPK"  && set_optimizer_attribute(m, "msg_lev", GLPK.GLP_MSG_OFF)
+        domrem_solver == "HiGHS" && set_optimizer_attribute(m, "output_flag", false)
+        domrem_solver == "Ipopt" && set_optimizer_attribute(m, "print_level", 0)
+        domrem_solver == "GLPK"  && set_optimizer_attribute(m, "msg_lev", GLPK.GLP_MSG_OFF)
     else
-        solver == "HiGHS" && set_optimizer_attribute(m, "output_flag", true)
-        solver == "Ipopt" && set_optimizer_attribute(m, "print_level", 5)
-        solver == "GLPK"  && set_optimizer_attribute(m, "msg_lev", GLPK.GLP_MSG_ALL)
+        domrem_solver == "HiGHS" && set_optimizer_attribute(m, "output_flag", true)
+        domrem_solver == "Ipopt" && set_optimizer_attribute(m, "print_level", 5)
+        domrem_solver == "GLPK"  && set_optimizer_attribute(m, "msg_lev", GLPK.GLP_MSG_ALL)
     end
 
     @variable(m, 0 <= p[j in 1:nOthActions ] <= 1, start=1/nOthActions)
@@ -529,8 +561,8 @@ function is_mixdominated(payoff_n, player, action ; dominated=[Int64[] for n in 
             println("optDist: ", optDist)
             println("p: ", ps)
         end
-        if strict
-            return (optDist < -tol )
+        if domrem_strict
+            return (optDist < -domrem_tol )
         else
             return optDist <= 0.0+eps()
         end
@@ -994,8 +1026,8 @@ function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     return eqs
 end
 
-function eq_on_support(payoff,S,verbosity)
-    if all(isempty.(dominated_actions(payoff,iterated=false,support=S))) # if there is even a single dominated strategy, this can not be a valid support for a Nash eq
+function eq_on_support(payoff,S; domrem_strict=true, domrem_mixedactions=true,domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
+    if all(isempty.(dominated_actions(payoff,iterated=false,support=S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity))) # if there is even a single dominated strategy, this can not be a valid support for a Nash eq
         nPlayers = size(payoff)[end]
         eq_test = (nPlayers == 2) ? nash_on_support_2p(payoff,S,verbosity=verbosity) : nash_on_support(payoff,S,verbosity=verbosity)
         if eq_test.solved
@@ -1018,11 +1050,16 @@ Compute `max_samples` (default one) Nash equilibria for a N-players generic game
 - `max_samples`: number of found sample Nash equilibria needed to stop the algorithm [def: `1`]. Set it to `Inf` to look for all the possible isolated equilibria of the game
 - `mt`: wheter to use multithreads (def: `true`). Note that currently multithreading is always disable for a single eq search due to performance issues
 - `isolated_eq_only`: wheter to look only for isolated equilibria (def: true)
+- `domrem_strict`: wheter to look for strictly dominated actions in the presolver [def: `true`]
+- `domrem_mixedactions`: wheter to look only for dominating pure actions (cheap) or look also to any possible mixed action domination (require solving a linear programming problem) [def: `true`]
+- `domrem_tol`: tollerance for the optimization problem of dominated actions removal. Used only if `domrem_mixedactions` is `true`. [def: 1e-08]
+- `domrem_solver`: the solver to use for the optimization problem of dominated action removal, either "HiGHS", "GLPK" or "Ipopt". Used only if `domrem_mixedactions` is `true` [def: "HiGHS"]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Notes
 - This function uses a support enumeration method to avoid the complementarity conditions and solve simpler problems conditional to a specific support.  More specifically we use the heuristic of [Porter-Nudelman-Shoham (2008)](https://doi.org/10.1016/j.geb.2006.03.015) and a dominance check, altought not recursively as in  [Turocy (2007)](https://web.archive.org/web/20230401080619/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36ba7977838df2bfdeab22157b0ed6ce940fb2be)
 - To reduce computational costs, in 2 players game by default only (and all) existing isolated Nash equilibria that are unique for a given support are returned by this function. To retrieve a "sample" of equilbria that are not isolated but represent instead a continuum in degenerated games in two players games you can set `isolated_eq_only` option to false. This will allow the search to eq within supports of different sizes for the two players. This option is always false for more than 2 players.
+- The algorithm implements the iterative removal of dominated strategies. However this is run for every possible support. If it is taking too long, you may want to consider setting `domrem_mixedactions` to false in order to look only for pure dominating strategies.
 
 # Returns
 - A vector of named tuples (even for the default single `max_samples`) with the following information: `equilibrium_strategies`, `expected_payoffs`, `supports` 
@@ -1040,7 +1077,7 @@ julia> eqs = nash_se(payoff,max_samples=Inf)
  (equilibrium_strategies = [[0.0, 0.33333333333333337, 0.6666666666666666], [0.33333333333333315, 0.6666666666666669]], expected_payoffs = [4.000000000000001, 2.6666666666666665], supports = [[2, 3], [1, 2]])
 ```
 """
-function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, verbosity=STD)
+function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, domrem_strict=true,domrem_mixedactions=true, domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     nSupportSizes = allow_mixed ? ( (nPlayers >2 || !isolated_eq_only) ? prod(nActions) : minimum(nActions) ) : 1
@@ -1094,7 +1131,7 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
                 idx = idxs_supports[i]
                 #println(idx)
                 S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
-                eq = eq_on_support(payoff,S,verbosity)
+                eq = eq_on_support(payoff,S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity)
                 #println(eq)
                 if !isnothing(eq)
                     eqs_ssize[i] = eq
@@ -1115,7 +1152,7 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
                 #println(idx)
                 S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
                 #println(S)
-                eq = eq_on_support(payoff,S,verbosity)
+                eq = eq_on_support(payoff,S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver, verbosity=verbosity)
                 if !isnothing(eq)
                     push!(eqs,eq)
                     if verbosity > STD
@@ -1136,7 +1173,7 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
                 # batch here min the number of eq remaining and the number of threads
                 #println(idx)
                 S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
-                eq = eq_on_support(payoff,S,verbosity)
+                eq = eq_on_support(payoff,S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity)
                 if !isnothing(eq)
                     eqs_ssize[i] = eq
                     eqs_ssize_mask[i] = true
