@@ -1,10 +1,9 @@
 using Test, StrategicGames
-import StrategicGames: outer_product, expected_value, nash_se2, nash_on_support, nash_on_support_2p, check_domination_2p
+import StrategicGames: outer_product, expected_value, nash_se2, nash_on_support, nash_on_support_2p, check_domination_2p, restrict_payoff, is_mixdominated
 
 payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
 payoff_array = expand_dimensions(payoff_tuple)
 @test payoff_array == [4; 0;; 0; 6;;; 4; 0;; 0; 6;;; ]
-
 
 vs = [[0.2,0.8], [0.1,0.9], [0.2,0.2,0.6]];
 product  = outer_product(vs)
@@ -102,8 +101,8 @@ eq_strategies = eq.equilibrium_strategies
 opt_u         = StrategicGames.best_response(payoff,[eq_strategies[1],[0.33,0.33,0.34],eq_strategies[3]],2).expected_payoff
 nash_u        = eq.expected_payoffs[2]
 @test isapprox(opt_u,nash_u)
-@test StrategicGames.is_best_response(payoff,eq_strategies,2)
-@test StrategicGames.is_nash(payoff,eq_strategies) == true
+@test is_best_response(payoff,eq_strategies,2)
+@test is_nash(payoff,eq_strategies) == true
 u = [(3,4,2) (1,5,3) (6,2,3); (2,6,1) (3,7,1) (1,7,2);;;
      (4,6,4) (2,7,6) (4,2,3); (3,7,2) (4,5,2) (0,4,2);;;]
 payoff        = expand_dimensions(u)
@@ -145,7 +144,7 @@ p = unstack_payoff(long_payoff)
 u = [(13,3) (1,4) (7,3); (4,1) (3,3) (6,2); (-1,9) (2,8) (8,-1)]
 payoff        = expand_dimensions(u)
 eq            = nash_cp(payoff)
-@test StrategicGames.is_nash(payoff,eq.equilibrium_strategies) == true
+@test is_nash(payoff,eq.equilibrium_strategies) == true
 
 U = [(0,0) (-1,1) (1,-1); (1,-1) (0,0) (-1,1); (-1,1) (1,-1) (0,0) ] # head, rock, scissor Only eq is [[0.33,0.33,0.33],[0.33,0.33,0.33]]
 payoff = expand_dimensions(U)
@@ -191,7 +190,6 @@ eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=false)
 
 
 # Testing restrict_payoff...
-import StrategicGames:restrict_payoff
 nActions  = (5,4,5)
 player    = 2
 dominated = [[2,3],[1,2],[1]]
@@ -202,7 +200,6 @@ restricted = restrict_payoff(payoff_n,2,dominated=dominated,support=support)
 @test restricted[:,:,1] == [31 36; 34 39; 35 40]
 
 # Testing is_mixdominated
-import StrategicGames:is_mixdominated
 u = [(3,1) (0,1);
      (9/4,1) (1,1);
      (0,1) (4,1)]
