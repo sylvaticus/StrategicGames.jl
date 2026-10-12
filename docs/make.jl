@@ -1,5 +1,9 @@
 using Documenter
 using StrategicGames
+using GameTheory
+
+const StrategicGamesGameTheoryExt =
+    Base.get_extension(StrategicGames, :StrategicGamesGameTheoryExt)
 
 push!(LOAD_PATH,"../src/")
 makedocs(
@@ -7,7 +11,8 @@ makedocs(
     pages = [
         "Index" => "index.md",
         "Using Python or R" => "using_other_languages.md",
-        "API"   => "api.md"
+        "API"   => "api.md",
+        "GameTheory.jl extension" => "ext.md"
     ],
     format = Documenter.HTML(prettyurls = false,
         analytics = "G-DC4KL97F1C",

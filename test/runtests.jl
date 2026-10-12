@@ -246,3 +246,34 @@ payoff_array = expand_dimensions(u);
 @test dominated_actions(payoff_array,1,domrem_mixedactions=true) == [2]
 
 
+
+# GameTheory.jl extension
+# (selective import: GameTheory also exports is_nash, best_response and
+# is_best_response)
+using GameTheory: GameTheory, NormalFormGame, AbstractNormalFormGame
+
+payoff_tuple = [(4,4) (0,0); (0,0) (6,6)]
+@test @inferred(expand_dimensions(NormalFormGame(payoff_tuple))) == expand_dimensions(payoff_tuple)
+
+U = [(0,0,0) ; (3,3,3) ;; (3,3,3)   ; (2,2,4) ;;;
+     (3,3,3)  ; (2,4,2)  ;; (4,2,2) ; (1,1,1)  ;;;]
+g3 = NormalFormGame(U)
+@test @inferred(expand_dimensions(g3)) == expand_dimensions(U)
+p = -1 + sqrt(10)/2
+@test @inferred(nash_cp(g3)).equilibrium_strategies ≈ [[p,1-p],[p,1-p],[p,1-p]]
+# The same layout in both directions
+g3b = @inferred NormalFormGame(expand_dimensions(g3))
+@test all(g3b.players[i].payoff_array == g3.players[i].payoff_array for i in 1:3)
+
+# A game defined by its payoff function
+struct MatchingPennies <: AbstractNormalFormGame{2,Int} end
+GameTheory.nums_actions(::MatchingPennies) = (2, 2)
+GameTheory.payoff_profile(::MatchingPennies, a) = a[1] == a[2] ? (1, -1) : (-1, 1)
+mp = MatchingPennies()
+mp_array = expand_dimensions([(1,-1) (-1,1); (-1,1) (1,-1)])
+@test @inferred(expand_dimensions(mp)) == mp_array
+@test @inferred(nash_cp(mp)).equilibrium_strategies ≈ nash_cp(mp_array).equilibrium_strategies
+# nash_se is not inference-clean in StrategicGames itself
+eqs = nash_se(mp, max_samples=Inf)
+@test length(eqs) == 1
+@test eqs[1].equilibrium_strategies ≈ [[0.5,0.5],[0.5,0.5]]
