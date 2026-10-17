@@ -658,7 +658,7 @@ Determine if a given strategy for player `nplayer` is a best response to a given
 - `nplayer`: counter of the player for which we want to verify if its strategy is a best_response (e.g. 1 or 3)
 - `atol`: absolute tollerance in comparing the expected payoff from the given strategy and those from the optimal one [def: `1e-07`]
 - `rtol`: relative tollerance in comparing the expected payoff from the given strategy and those from the optimal one [def: `1e-07`]
-- `solver`: currently either "GLPK" or "HiGHS"
+- `solver`: currently either "GLPK" or "HiGHS" [default]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Example : 
@@ -674,7 +674,7 @@ julia> is_best_response(expand_dimensions(payoff_array),[[0,1],[0.5,0.5]],2)
 false
 ```
 """
-function is_best_response(payoff,strategy_profile,player;atol=1e-07,rtol=1e-07,solver="GLPK",verbosity=STD)
+function is_best_response(payoff,strategy_profile,player;atol=1e-07,rtol=1e-07,solver="HiGHS",verbosity=STD)
     best_u = best_response(payoff,strategy_profile,player,solver=solver,verbosity=verbosity).expected_payoff
     this_u = expected_payoff(payoff,strategy_profile,player)
     return isapprox(this_u,best_u,atol=atol,rtol=rtol)
@@ -690,7 +690,7 @@ Determine if a strategy profile is a Nash equilibrium for a given payoff array, 
 - `strategy_profile`: the vector of vectors defining the strategies for the N players
 - `atol`: absolute tollerance in comparing the expected payoffs from the given strategies and those from the optimal ones [def: `1e-07`]
 - `rtol`: relative tollerance in comparing the expected payoffs from the given strategies and those from the optimal ones [def: `1e-07`]
-- `solver`: currently either "GLPK" or "HiGHS"
+- `solver`: currently either "GLPK" or "HiGHS" [default]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
 
 # Example : 
@@ -704,7 +704,7 @@ julia> is_nash(expand_dimensions(payoff_array),[[0,1],[0,1]])
 true
 ```
 """
-function is_nash(payoff,strategy_profile;atol=1e-07,rtol=1e-07,solver="GLPK",verbosity=STD)
+function is_nash(payoff,strategy_profile;atol=1e-07,rtol=1e-07,solver="HiGHS",verbosity=STD)
     all([isapprox( best_response(payoff,strategy_profile,i,solver=solver,verbosity=verbosity).expected_payoff,
                    expected_payoff(payoff,strategy_profile,i),
                    atol=atol,rtol=rtol) for i in 1:ndims(payoff)-1])
