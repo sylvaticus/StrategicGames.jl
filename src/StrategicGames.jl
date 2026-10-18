@@ -134,7 +134,7 @@ julia> outer_product(vs)
 [:, :, 3] =
  0.012  0.108
  0.048  0.432
- ```
+```
 """
 #outer_product(vs...) =  .*([reshape(vs[d], (ntuple(Returns(1), d-1)..., :)) for d in 1:length(vs)]... )
 #outer_product(vs) = Base.splat(*).(Iterators.product(vs...))
@@ -143,7 +143,7 @@ outer_product(vs)    = prod.(Iterators.product(vs...))
 outer_product(vs...) = prod.(Iterators.product(vs...))
 
 """
-  batch(n,bsize;sequential=false,rng)
+    batch(n,bsize;sequential=false,rng)
 
 Return a vector of `bsize` vectors of indeces from `1` to `n`.
 Randomly unless the optional parameter `sequential` is used.
@@ -155,7 +155,7 @@ julia> Utils.batch(6,2,sequential=true)
  [1, 2]
  [3, 4]
  [5, 6]
- ```
+```
 """
 function batch(n::Integer,bsize::Integer)
     ridx = collect(1:n)
