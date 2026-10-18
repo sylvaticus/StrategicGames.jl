@@ -18,7 +18,7 @@ Order   = [:constant, :type, :function, :macro]
 ```
  
 
- ## [Some examples](@id examples)
+## [Some examples](@id examples)
 
 ```julia
 julia> using Pkg; Pkg.add("StrategicGames") # only once to install the library
@@ -27,7 +27,7 @@ julia> using StrategicGames
 
 #### 3-players game with payoff a function of the number of players choosing the same option
 
-The 3 players in this game can choose between `X` or `Y` with payoffs respectively `2nₓ - 2nₓ²+3` and `4-nᵧ` where `nₓ` and `nᵧ` represent the number of players that choose `X` or `Y`.
+The 3 players in this game can choose between `X` or `Y` with payoffs respectively `2nₓ - nₓ²+3` and `4-nᵧ` where `nₓ` and `nᵧ` represent the number of players that choose `X` or `Y`.
 (_this example is taken from https://www.youtube.com/watch?v=bKrwQKUT0v8 where it is analytically solved_)
 ```julia
 julia> U = [(0,0,0) ; (3,3,3) ;; (3,3,3) ; (2,2,4) ;;;
@@ -146,7 +146,7 @@ julia> eq_strategies = [eq.equilibrium_strategies for eq in eqs]
  [[0.9999999999999999, 0.0], [0.9999999999999999, 0.0]]
  [[0.0, 0.9999999999999999], [0.0, 0.9999999999999999]]
  [[0.6666666666666666, 0.33333333333333337], [0.3333333333333333, 0.6666666666666667]]
- ```
+```
 
 #### Rock, paper, scissor
 ```julia
