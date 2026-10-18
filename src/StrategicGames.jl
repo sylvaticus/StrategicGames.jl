@@ -1145,7 +1145,7 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
                 end
             end
             if any(eqs_ssize_mask) # could well noone if found on this support size and we need to look for another one...
-                return eqs_ssize[eqs_ssize_mask]
+                return eqs_ssize[eqs_ssize_mask]::Vector{NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}}
             end      
         elseif (!mt) || eq_still_to_find < nSupportsToTest # we go sequencing single trheading...
             for idx in CartesianIndices((length.(D)...,))

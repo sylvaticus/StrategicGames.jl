@@ -273,7 +273,6 @@ mp = MatchingPennies()
 mp_array = expand_dimensions([(1,-1) (-1,1); (-1,1) (1,-1)])
 @test @inferred(expand_dimensions(mp)) == mp_array
 @test @inferred(nash_cp(mp)).equilibrium_strategies ≈ nash_cp(mp_array).equilibrium_strategies
-# nash_se is not inference-clean in StrategicGames itself
-eqs = nash_se(mp, max_samples=Inf)
+eqs = @inferred nash_se(mp, max_samples=Inf)
 @test length(eqs) == 1
 @test eqs[1].equilibrium_strategies ≈ [[0.5,0.5],[0.5,0.5]]
