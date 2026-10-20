@@ -204,6 +204,9 @@ D = [StrategicGames.combinations(1:3,2), StrategicGames.combinations(1:2,2)]
 @test StrategicGames.first_eq_on_supports_mt(payoff,D).supports == [[1,2],[1,2]]
 A = [0 1 -1; -1 0 1; 1 -1 0] # rock-paper-scissors: no pure eq
 @test isnothing(StrategicGames.first_eq_on_supports_mt(expand_dimensions([(A[i,j],-A[i,j]) for i in 1:3, j in 1:3]),[StrategicGames.combinations(1:3,1), StrategicGames.combinations(1:3,1)]))
+# The (much slower) check of the domination by mixed actions doesn't change the eqs found
+payoff = expand_dimensions([(3,3) (3,2); (2,2) (5,6); (0,3) (6,1)])
+@test [eq.supports for eq in nash_se(payoff,max_samples=Inf,domrem_mixedactions=true)] == [eq.supports for eq in nash_se(payoff,max_samples=Inf)]
 
 
 # Testing restrict_payoff...

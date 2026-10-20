@@ -1026,7 +1026,7 @@ function nash_se2(payoff; allow_mixed=true, max_samples=1, verbosity=STD)
     return eqs
 end
 
-function eq_on_support(payoff,S; domrem_strict=true, domrem_mixedactions=true,domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
+function eq_on_support(payoff,S; domrem_strict=true, domrem_mixedactions=false,domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
     if all(isempty.(dominated_actions(payoff,iterated=false,support=S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity))) # if there is even a single dominated strategy, this can not be a valid support for a Nash eq
         nPlayers = size(payoff)[end]
         eq_test = (nPlayers == 2) ? nash_on_support_2p(payoff,S,verbosity=verbosity) : nash_on_support(payoff,S,verbosity=verbosity)
@@ -1050,7 +1050,7 @@ Supports are handed out to the threads in increasing order through an atomic cou
 
 Returns the equilibrium or `nothing` if none of the supports hosts one. Keyword arguments are passed to `eq_on_support`.
 """
-function first_eq_on_supports_mt(payoff,D; domrem_strict=true, domrem_mixedactions=true,domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
+function first_eq_on_supports_mt(payoff,D; domrem_strict=true, domrem_mixedactions=false,domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
     nPlayers  = length(D)
     Dc        = [collect(d) for d in D]
     idxs      = CartesianIndices((length.(Dc)...,))
@@ -1087,7 +1087,7 @@ Compute `max_samples` (default one) Nash equilibria for a N-players generic game
 - `mt`: wheter to use multithreads (def: `true`). Multithreading requires Julia to be started with more than one thread (e.g. `julia -t auto`). For a single eq search (`max_samples=1`) the returned equilibrium is the same as in the single-threaded search
 - `isolated_eq_only`: wheter to look only for isolated equilibria (def: true)
 - `domrem_strict`: wheter to look for strictly dominated actions in the presolver [def: `true`]
-- `domrem_mixedactions`: wheter to look only for dominating pure actions (cheap) or look also to any possible mixed action domination (require solving a linear programming problem) [def: `true`]
+- `domrem_mixedactions`: wheter to look only for dominating pure actions (cheap) or look also to any possible mixed action domination (require solving a linear programming problem for each action of each support, much slower, see Notes) [def: `false`]
 - `domrem_tol`: tollerance for the optimization problem of dominated actions removal. Used only if `domrem_mixedactions` is `true`. [def: 1e-08]
 - `domrem_solver`: the solver to use for the optimization problem of dominated action removal, either "HiGHS", "GLPK" or "Ipopt". Used only if `domrem_mixedactions` is `true` [def: "HiGHS"]
 - `verbosity`: either `NONE`, `LOW`, `STD` [default], `HIGH` or `FULL`
@@ -1095,7 +1095,7 @@ Compute `max_samples` (default one) Nash equilibria for a N-players generic game
 # Notes
 - This function uses a support enumeration method to avoid the complementarity conditions and solve simpler problems conditional to a specific support.  More specifically we use the heuristic of [Porter-Nudelman-Shoham (2008)](https://doi.org/10.1016/j.geb.2006.03.015) and a dominance check, altought not recursively as in  [Turocy (2007)](https://web.archive.org/web/20230401080619/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36ba7977838df2bfdeab22157b0ed6ce940fb2be)
 - To reduce computational costs, in 2 players game by default only (and all) existing isolated Nash equilibria that are unique for a given support are returned by this function. To retrieve a "sample" of equilbria that are not isolated but represent instead a continuum in degenerated games in two players games you can set `isolated_eq_only` option to false. This will allow the search to eq within supports of different sizes for the two players. This option is always false for more than 2 players.
-- The algorithm implements the iterative removal of dominated strategies. However this is run for every possible support. If it is taking too long, you may want to consider setting `domrem_mixedactions` to false in order to look only for pure dominating strategies.
+- The algorithm implements the removal of dominated strategies, run for every possible support. By default only domination by pure actions is checked. Setting `domrem_mixedactions` to `true` also checks the domination by mixed actions, but this requires solving a linear programming problem for each action of each support and it is much slower (from 7 to more than 300 times on the games in the package benchmarks), while, with strict domination (the default `domrem_strict=true`), it doesn't change the equilibria found, as the additional supports it discards can't host a Nash equilibrium anyway.
 
 # Returns
 - A vector of named tuples (even for the default single `max_samples`) with the following information: `equilibrium_strategies`, `expected_payoffs`, `supports` 
@@ -1113,7 +1113,7 @@ julia> eqs = nash_se(payoff,max_samples=Inf)
  (equilibrium_strategies = [[0.0, 0.33333333333333337, 0.6666666666666666], [0.33333333333333315, 0.6666666666666669]], expected_payoffs = [4.000000000000001, 2.6666666666666665], supports = [[2, 3], [1, 2]])
 ```
 """
-function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, domrem_strict=true,domrem_mixedactions=true, domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
+function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, domrem_strict=true,domrem_mixedactions=false, domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
     nActions = size(payoff)[1:end-1]
     nPlayers = size(payoff)[end]
     nSupportSizes = allow_mixed ? ( (nPlayers >2 || !isolated_eq_only) ? prod(nActions) : minimum(nActions) ) : 1
