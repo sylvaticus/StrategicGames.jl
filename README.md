@@ -64,62 +64,66 @@ false
  - [GtNash](https://forgemia.inra.fr/game-theory-tools-group/gtnash/-/tree/main/)
 
 ### Benchmarks
-The following benchmarks have been run on a Intel Core 5 laptop on StrategicGames v0.0.5.
+The following benchmarks have been run on an Intel Core Ultra 7 165H laptop (22 threads) with Julia 1.13.1, on StrategicGames v0.0.8, GameTheory.jl v0.8.0, Nashpy v0.0.43 and pygambit v16.7.0.
 See [benchmarks/benchmarks_other_libraries.jl](/benchmarks/benchmarks_other_libraries.jl) for details.
 
+Times are medians in nanoseconds and memory is in bytes (both from BenchmarkTools, Julia libraries only for the memory), `neqs` is the number of equilibria returned.
+`nash_se` is run with its default `domrem_mixedactions=false`, as none of the other algorithms removes the actions dominated by mixed strategies (setting it to `true` would be much slower on these games, with the same equilibria found).
+In the `rand_6x7_1st_eq` benchmark only the first equilibrium is searched for, and `nash_se` is reported both using all the 22 threads and single-threaded.
+
 ```text
- Row │ benchmark_name   library         method                    time             memory           alloc    neqs   notes              
-     │ String           String          String                    Float64          Float64?         Int64?   Int64  String             
-─────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   1 │ Test             rand            rand(2,2)                     59.4469           96.0              1      1
-   2 │ small_3x2        StrategicGames  nash_cp                        1.58605e7    306112.0           6002      1
-   3 │ small_3x2        StrategicGames  nash_se                        2.42753e6    348928.0           8022      3
-   4 │ small_3x2        GameTheory      hc_solve                       1.54957e7         2.90228e6    38420      3
-   5 │ small_3x2        GameTheory      support_enumeration            1.26744e5      6848.0            103      3
-   6 │ small_3x2        GameTheory      lrsnash                    81660.0           25208.0           1064      3
-   7 │ small_3x2        nashpy          vertex_enumeration             2.24663e7   missing          missing      3
-   8 │ small_3x2        nashpy          lemke_howson_enumeration       1.70237e6   missing          missing      5  repeated results
-   9 │ small_3x2        nashpy          support_enumeration            2.88622e6   missing          missing      3
-  10 │ small_3x2        pygambit        lcp_solve                 626370.0         missing          missing      3
-  11 │ small_3x2        pygambit        ExternalEnumPolySolver         3.04543e6   missing          missing      3
-  12 │ rand_6x7         StrategicGames  nash_cp                        6.79384e7    832992.0          16774      0
-  13 │ rand_6x7         StrategicGames  nash_se                        5.81445e7         8.39402e7  1489215      1
-  14 │ rand_6x7         GameTheory      hc_solve                       2.29249e10        2.13365e8  5674406      1
-  15 │ rand_6x7         GameTheory      support_enumeration            1.07393e6    255888.0           3223      1
-  16 │ rand_6x7         GameTheory      lrsnash                        1.22114e6    189432.0          11058      1
-  17 │ rand_6x7         nashpy          vertex_enumeration             4.69925e8   missing          missing      1
-  18 │ rand_6x7         nashpy          lemke_howson_enumeration       1.12535e7   missing          missing     13  repeated results
-  19 │ rand_6x7         nashpy          support_enumeration            1.14592e9   missing          missing      0
-  20 │ rand_6x7         pygambit        lcp_solve                      9.02179e6   missing          missing      1
-  21 │ rand_6x7         pygambit        ExternalEnumPolySolver         5.88408e11  missing          missing      1
-  22 │ rand_dec_6x5     StrategicGames  nash_cp                        2.62495e7    666384.0          12585      1
-  23 │ rand_dec_6x5     StrategicGames  nash_se                        1.91476e7         1.63948e7   301926      3
-  24 │ rand_dec_6x5     StrategicGames  nash_se                        2.10698e7         1.63948e7   301928      3
-  25 │ rand_dec_6x5     GameTheory      hc_solve                       2.81279e9         1.31916e7   129193      3
-  26 │ rand_dec_6x5     GameTheory      support_enumeration            3.6849e5      82976.0           1112      3
-  27 │ rand_dec_6x5     GameTheory      lrsnash                        1.18709e6    194672.0           9179      3
-  28 │ rand_dec_6x5     nashpy          vertex_enumeration             1.22334e8   missing          missing      3
-  29 │ rand_dec_6x5     nashpy          lemke_howson_enumeration       5.08469e6   missing          missing     11  repeated results
-  30 │ rand_dec_6x5     nashpy          support_enumeration            2.52825e8   missing          missing      3
-  31 │ rand_4x4x2       StrategicGames  nash_cp                        7.2921e8          2.99718e6    85361      0
-  32 │ rand_4x4x2       StrategicGames  nash_se                        3.10279e9         7.36352e7  1353042      7  1 eq repeated
-  33 │ rand_4x4x2       GameTheory      hc_solve                       6.81009e9         1.87611e7   168777      4  2 eq missing
-  34 │ rand_4x4x2       pygambit        ExternalEnumPolySolver         6.67698e8   missing          missing      5  1 eq missed
-  35 │ rand_6x7_1st_eq  StrategicGames  nash_se                        7.89602e6         3.82298e6    69988      1
-  36 │ rand_6x7_1st_eq  GameTheory      hc_solve                       1.17059e10        1.06781e8  2643505      1
-  37 │ rand_6x7_1st_eq  nashpy          vertex_enumeration             2.20641e8   missing          missing      1
-  38 │ rand_6x7_1st_eq  nashpy          lemke_howson_enumeration       8.8455e5    missing          missing      1
-  39 │ rand_6x7_1st_eq  nashpy          support_enumeration         3977.38        missing          missing      0  no eq reported
-  40 │ degenerated_3x2  StrategicGames  nash_cp                        1.74314e7    315424.0           6320      1
-  41 │ degenerated_3x2  StrategicGames  nash_se                        2.39501e6    430528.0           9999      3
-  42 │ degenerated_3x2  GameTheory      hc_solve                       1.58658e7         2.91026e6    38445      1
-  43 │ degenerated_3x2  GameTheory      support_enumeration       128884.0            6544.0             98      2
-  44 │ degenerated_3x2  GameTheory      lrsnash                    79857.5           23688.0           1002      3
-  45 │ degenerated_3x2  nashpy          vertex_enumeration             1.8437e7    missing          missing      3
-  46 │ degenerated_3x2  nashpy          lemke_howson_enumeration       1.75092e6   missing          missing      5  2 repeated results
-  47 │ degenerated_3x2  nashpy          support_enumeration            3.03576e6   missing          missing      2
-  48 │ degenerated_3x2  pygambit        lcp_solve                 672832.0         missing          missing      3
-  49 │ degenerated_3x2  pygambit        ExternalEnumPolySolver         3.39349e6   missing          missing      2
+ Row │ benchmark_name   library         method                    time            memory           alloc    neqs   notes
+     │ String           String          String                    Float64         Float64?         Int64?   Int64  String
+─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ Test             rand            rand(2,2)                     20.256          112.0              2      1
+   2 │ small_3x2        StrategicGames  nash_cp                        1.892e7          1.2118e6     37141      1
+   3 │ small_3x2        StrategicGames  nash_se                        1.84491e6   372208.0          12095      3
+   4 │ small_3x2        GameTheory      hc_solve                       9.74171e6        5.15837e6    77294      3
+   5 │ small_3x2        GameTheory      support_enumeration        13415.0           5120.0            124      3
+   6 │ small_3x2        GameTheory      lrsnash                    51035.5          40456.0           1269      3
+   7 │ small_3x2        nashpy          vertex_enumeration             8.14761e6  missing          missing      3
+   8 │ small_3x2        nashpy          lemke_howson_enumeration  739972.0        missing          missing      5  repeated results
+   9 │ small_3x2        nashpy          support_enumeration            1.49346e6  missing          missing      3
+  10 │ small_3x2        pygambit        lcp_solve                 432796.0        missing          missing      3
+  11 │ small_3x2        pygambit        enumpoly_solve                 3.96886e5  missing          missing      3
+  12 │ rand_6x7         StrategicGames  nash_cp                        1.14288e8        8.00475e6   244963      0
+  13 │ rand_6x7         StrategicGames  nash_se                        3.27694e7        7.21902e7  1579071      1
+  14 │ rand_6x7         GameTheory      hc_solve                       7.19525e9        2.14659e8  1373479      1
+  15 │ rand_6x7         GameTheory      support_enumeration            4.95192e5   208864.0           4566      1
+  16 │ rand_6x7         GameTheory      lrsnash                        1.01465e6   353528.0          12312      1
+  17 │ rand_6x7         nashpy          vertex_enumeration             1.74133e8  missing          missing      1
+  18 │ rand_6x7         nashpy          lemke_howson_enumeration       5.594e6    missing          missing     13  repeated results
+  19 │ rand_6x7         nashpy          support_enumeration            6.43585e8  missing          missing      0
+  20 │ rand_6x7         pygambit        lcp_solve                      7.65117e6  missing          missing      1
+  21 │ rand_6x7         pygambit        enumpoly_solve                 6.72629e8  missing          missing      1  single run
+  22 │ rand_dec_6x5     StrategicGames  nash_cp                        1.00546e8        4.11159e6   125727      1
+  23 │ rand_dec_6x5     StrategicGames  nash_se                        2.54142e7        1.46028e7   337455      3
+  24 │ rand_dec_6x5     GameTheory      hc_solve                       1.60984e9        1.90183e7   221355      3
+  25 │ rand_dec_6x5     GameTheory      support_enumeration            1.7658e5     61360.0           1398      3
+  26 │ rand_dec_6x5     GameTheory      lrsnash                        1.39889e6   277232.0          10087      3
+  27 │ rand_dec_6x5     nashpy          vertex_enumeration             5.44506e7  missing          missing      3
+  28 │ rand_dec_6x5     nashpy          lemke_howson_enumeration       2.02323e6  missing          missing     11  repeated results
+  29 │ rand_dec_6x5     nashpy          support_enumeration            1.27051e8  missing          missing      3
+  30 │ rand_4x4x2       StrategicGames  nash_cp                        1.01613e8        5.02784e6   145097      0
+  31 │ rand_4x4x2       StrategicGames  nash_se                        1.09057e9        7.65537e7  1518860      7  1 eq repeated
+  32 │ rand_4x4x2       GameTheory      hc_solve                       2.01035e9        6.58439e7   519644      4  2 eq missing
+  33 │ rand_4x4x2       pygambit        enumpoly_solve                 3.63245e7  missing          missing      3  3 eq missed
+  34 │ rand_6x7_1st_eq  StrategicGames  nash_se                        3.19987e6        6.94906e6   155236      1  22 threads
+  35 │ rand_6x7_1st_eq  StrategicGames  nash_se                        4.05169e6        3.31806e6    74993      1  single thread
+  36 │ rand_6x7_1st_eq  GameTheory      hc_solve                       2.29806e9        7.24779e7   497224      1
+  37 │ rand_6x7_1st_eq  nashpy          vertex_enumeration             8.72077e7  missing          missing      1
+  38 │ rand_6x7_1st_eq  nashpy          lemke_howson_enumeration  343807.0        missing          missing      1
+  39 │ rand_6x7_1st_eq  nashpy          support_enumeration         5931.17       missing          missing      0  no eq reported
+  40 │ degenerated_3x2  StrategicGames  nash_cp                        2.31078e7        1.21561e6    37211      1
+  41 │ degenerated_3x2  StrategicGames  nash_se                        3.13353e6   461872.0          15360      3
+  42 │ degenerated_3x2  GameTheory      hc_solve                       1.28393e7        5.16101e6    77299      1
+  43 │ degenerated_3x2  GameTheory      support_enumeration        17366.0           4816.0            116      2
+  44 │ degenerated_3x2  GameTheory      lrsnash                    74776.0          38344.0           1204      3
+  45 │ degenerated_3x2  nashpy          vertex_enumeration             8.0939e6   missing          missing      3
+  46 │ degenerated_3x2  nashpy          lemke_howson_enumeration  931296.0        missing          missing      5  2 repeated results
+  47 │ degenerated_3x2  nashpy          support_enumeration            1.6891e6   missing          missing      2
+  48 │ degenerated_3x2  pygambit        lcp_solve                 494266.0        missing          missing      3
+  49 │ degenerated_3x2  pygambit        enumpoly_solve                 4.4146e5   missing          missing      2
 
 ```
 ## Acknowledgements
