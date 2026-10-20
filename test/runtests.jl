@@ -188,6 +188,23 @@ eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=true)
 eqs = nash_se(payoff,max_samples=Inf, mt=true, isolated_eq_only=false)
 @test length(eqs) == 4
 
+# Single eq multithreaded search must return the same eq as the sequential one
+# Generalized rock-paper-scissors: the only eq is fully mixed, so all smaller supports are scanned first
+A = [i==j ? 0 : (isodd(mod(j-i,5)) ? 1 : -1) for i in 1:5, j in 1:5]
+payoff = expand_dimensions([(A[i,j],-A[i,j]) for i in 1:5, j in 1:5])
+eqs_st = nash_se(payoff, mt=false)
+eqs_mt = @inferred nash_se(payoff, mt=true)
+@test length(eqs_mt) == 1
+@test eqs_mt[1].supports == eqs_st[1].supports == [collect(1:5), collect(1:5)]
+@test eqs_mt[1].equilibrium_strategies ≈ [fill(0.2,5), fill(0.2,5)]
+payoff = expand_dimensions(u)
+D = [StrategicGames.combinations(1:3,1), StrategicGames.combinations(1:2,1)]
+@test StrategicGames.first_eq_on_supports_mt(payoff,D).supports == nash_se(payoff, mt=false)[1].supports
+D = [StrategicGames.combinations(1:3,2), StrategicGames.combinations(1:2,2)]
+@test StrategicGames.first_eq_on_supports_mt(payoff,D).supports == [[1,2],[1,2]]
+A = [0 1 -1; -1 0 1; 1 -1 0] # rock-paper-scissors: no pure eq
+@test isnothing(StrategicGames.first_eq_on_supports_mt(expand_dimensions([(A[i,j],-A[i,j]) for i in 1:3, j in 1:3]),[StrategicGames.combinations(1:3,1), StrategicGames.combinations(1:3,1)]))
+
 
 # Testing restrict_payoff...
 nActions  = (5,4,5)
@@ -273,7 +290,6 @@ mp = MatchingPennies()
 mp_array = expand_dimensions([(1,-1) (-1,1); (-1,1) (1,-1)])
 @test @inferred(expand_dimensions(mp)) == mp_array
 @test @inferred(nash_cp(mp)).equilibrium_strategies ≈ nash_cp(mp_array).equilibrium_strategies
-# nash_se is not inference-clean in StrategicGames itself
-eqs = nash_se(mp, max_samples=Inf)
+eqs = @inferred nash_se(mp, max_samples=Inf)
 @test length(eqs) == 1
 @test eqs[1].equilibrium_strategies ≈ [[0.5,0.5],[0.5,0.5]]

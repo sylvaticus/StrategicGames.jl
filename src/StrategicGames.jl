@@ -1037,7 +1037,43 @@ function eq_on_support(payoff,S; domrem_strict=true, domrem_mixedactions=true,do
             return nothing
         end
     end
-end    
+end
+
+const EqOnSupport = NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}
+
+"""
+    first_eq_on_supports_mt(payoff,D; kwargs...)
+
+Multithreaded search of the first support (in `CartesianIndices` order, as in the sequential search of `nash_se`) of the combinations in `D` that hosts a Nash equilibrium.
+
+Supports are handed out to the threads in increasing order through an atomic counter, and the lowest index of a support with an equilibrium found so far is kept in an atomic. Threads stop as soon as the next support to test comes after that index, so only the supports in flight are wasted, while the returned equilibrium is the same as the one returned by the sequential search.
+
+Returns the equilibrium or `nothing` if none of the supports hosts one. Keyword arguments are passed to `eq_on_support`.
+"""
+function first_eq_on_supports_mt(payoff,D; domrem_strict=true, domrem_mixedactions=true,domrem_tol=1e-06,domrem_solver="HiGHS",verbosity=STD)
+    nPlayers  = length(D)
+    Dc        = [collect(d) for d in D]
+    idxs      = CartesianIndices((length.(Dc)...,))
+    nSupports = length(idxs)
+    eqs       = Vector{Union{Nothing,EqOnSupport}}(nothing,nSupports)
+    next_i    = Threads.Atomic{Int}(1)            # next support to test
+    first_i   = Threads.Atomic{Int}(nSupports+1)  # lowest support with an eq found so far
+    @sync for _ in 1:min(Threads.nthreads(),nSupports)
+        Threads.@spawn while true
+            i = Threads.atomic_add!(next_i,1) # returns the old value
+            i >= first_i[] && break # also when i > nSupports
+            idx = idxs[i]
+            S   = [Dc[n][idx[n]] for n in 1:nPlayers]
+            eq  = eq_on_support(payoff,S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity)
+            if !isnothing(eq)
+                eqs[i] = eq
+                Threads.atomic_min!(first_i,i)
+                break # any further support handed to this thread would come after i
+            end
+        end
+    end
+    return first_i[] <= nSupports ? eqs[first_i[]] : nothing
+end
 
 """
     nash_se(payoff_array; allow_mixed=true, max_samples=1, isolated_eq_only=true, mt=true, verbosity=STD)
@@ -1048,7 +1084,7 @@ Compute `max_samples` (default one) Nash equilibria for a N-players generic game
 - `payoff_array`: the Nplayers+1 dimensional array of payoffs for the N players
 - `allow_mixed`: wether to look and report also mixed strategies (default) or look only for pure strategies (if any)
 - `max_samples`: number of found sample Nash equilibria needed to stop the algorithm [def: `1`]. Set it to `Inf` to look for all the possible isolated equilibria of the game
-- `mt`: wheter to use multithreads (def: `true`). Note that currently multithreading is always disable for a single eq search due to performance issues
+- `mt`: wheter to use multithreads (def: `true`). Multithreading requires Julia to be started with more than one thread (e.g. `julia -t auto`). For a single eq search (`max_samples=1`) the returned equilibrium is the same as in the single-threaded search
 - `isolated_eq_only`: wheter to look only for isolated equilibria (def: true)
 - `domrem_strict`: wheter to look for strictly dominated actions in the presolver [def: `true`]
 - `domrem_mixedactions`: wheter to look only for dominating pure actions (cheap) or look also to any possible mixed action domination (require solving a linear programming problem) [def: `true`]
@@ -1083,8 +1119,6 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
     nSupportSizes = allow_mixed ? ( (nPlayers >2 || !isolated_eq_only) ? prod(nActions) : minimum(nActions) ) : 1
     
     eqs = NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}[]
-
-    mt = ( max_samples == 1 ) ? false : mt # as  mutithreaded for a single eq is currently very slow
 
     support_sizes = Matrix{Union{Int64,NTuple{nPlayers,Int64}}}(undef,nSupportSizes,3) # sum, diff, support sizes
     if allow_mixed
@@ -1121,32 +1155,15 @@ function nash_se(payoff; allow_mixed=true, max_samples=1, isolated_eq_only=true,
         # https://discourse.julialang.org/t/programming-pattern-for-when-you-want-thread-race/97457
         
         
-        if max_samples == 1 && mt # multithreaded first find the treasure race....
-            eqs_ssize = Array{NamedTuple{(:equilibrium_strategies, :expected_payoffs, :supports), Tuple{Vector{Vector{Float64}}, Vector{Float64},Vector{Vector{Int64}}}}}(undef,nSupportsToTest)
-            eqs_ssize_mask = fill(false, nSupportsToTest)
-            idxs_supports  = reshape([idx for idx in CartesianIndices((length.(D)...,))],nSupportsToTest)
-            lk = ReentrantLock()
-            found = true
-            Threads.@threads for i in 1:length(idxs_supports)
-                idx = idxs_supports[i]
-                #println(idx)
-                S = [collect(D[n])[idx[n]] for n in 1:nPlayers]
-                eq = eq_on_support(payoff,S,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity)
-                #println(eq)
-                if !isnothing(eq)
-                    eqs_ssize[i] = eq
-                    eqs_ssize_mask[i] = true
-                    lock(lk) do 
-                        found = true
-                    end
+        if max_samples == 1 && mt && Threads.nthreads() > 1 # multithreaded race to the first support with an eq
+            eq = first_eq_on_supports_mt(payoff,D,domrem_strict=domrem_strict,domrem_mixedactions=domrem_mixedactions, domrem_tol=domrem_tol,domrem_solver=domrem_solver,verbosity=verbosity)
+            if !isnothing(eq) # could well noone if found on this support size and we need to look for another one...
+                push!(eqs,eq)
+                if verbosity > STD
+                    println("Eq #1/1 found: $eq")
                 end
-                if !found
-                    break
-                end
+                return eqs
             end
-            if any(eqs_ssize_mask) # could well noone if found on this support size and we need to look for another one...
-                return eqs_ssize[eqs_ssize_mask]
-            end      
         elseif (!mt) || eq_still_to_find < nSupportsToTest # we go sequencing single trheading...
             for idx in CartesianIndices((length.(D)...,))
                 #println(idx)
