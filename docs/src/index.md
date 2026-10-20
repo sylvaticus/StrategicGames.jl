@@ -17,6 +17,88 @@ Modules = [StrategicGames]
 Order   = [:constant, :type, :function, :macro]
 ```
  
+## [Payoff representations](@id payoff_representations)
+
+The payoffs of a game in normal form can be written in two equivalent forms. The first one is the most natural to type, while the functions of this package work with the second one, obtained from the first with [`expand_dimensions`](@ref).
+
+#### First form: N-dimensional array of N-tuples
+
+In a game with `N` players, the payoffs are an `N`-dimensional array `U` where:
+- dimension `n` corresponds to player `n`, and the index along it is the action chosen by that player;
+- each element is a tuple with the payoffs of all the `N` players for that action profile.
+
+So `U[a₁,a₂,...,aₙ]` is the tuple of payoffs when player 1 plays action `a₁`, player 2 plays action `a₂`, and so on, and `U[a₁,a₂,...,aₙ][n]` is the payoff of player `n` alone.
+
+With 2 players this is the usual bimatrix, with the actions of player 1 on the rows and those of player 2 on the columns. In the Prisoner's dilemma below, `U[1,2] = (-3,0)` means that when player 1 plays its first action and player 2 its second one, player 1 gets `-3` and player 2 gets `0`.
+
+With 3 players the array has a third dimension, the action of player 3, and it is convenient to write it with Julia's `;` (concatenate along the first dimension, i.e. player 1's actions), `;;` (along the second dimension, player 2's actions) and `;;;` (along the third dimension, player 3's actions) syntax:
+
+```julia
+julia> U = [(0,0,0) ; (3,3,3) ;; (3,3,3) ; (2,2,4) ;;;   # player 3 plays action 1
+            (3,3,3) ; (2,4,2) ;; (4,2,2) ; (1,1,1) ;;;]  # player 3 plays action 2
+2×2×2 Array{Tuple{Int64, Int64, Int64}, 3}:
+[:, :, 1] =
+ (0, 0, 0)  (3, 3, 3)
+ (3, 3, 3)  (2, 2, 4)
+[:, :, 2] =
+ (3, 3, 3)  (4, 2, 2)
+ (2, 4, 2)  (1, 1, 1)
+julia> U[1,2,2] # player 1 plays action 1, player 2 action 2, player 3 action 2
+(4, 2, 2)
+julia> U[1,2,2][1] # payoff of player 1 for this action profile
+4
+```
+
+#### Second form: (N+1)-dimensional array of scalars
+
+[`expand_dimensions`](@ref) moves the payoffs out of the tuples into an additional, last, dimension that indicates the player receiving the payoff:
+
+```julia
+julia> payoff_array = expand_dimensions(U);
+```
+
+The result is an `N+1` dimensional array of scalars, where:
+
+```julia
+payoff_array[a₁,a₂,...,aₙ,n] == U[a₁,a₂,...,aₙ][n]
+```
+
+For the 3-players game above, `payoff_array` has size `(2,2,2,3)`: 2 actions for each of the 3 players, plus a last dimension of size 3 for the 3 players' payoffs. The tuple `U[1,2,2] = (4,2,2)` is now spread across the last dimension:
+
+| First form          | Second form               | Meaning                                                        |
+|:------------------- |:------------------------- |:-------------------------------------------------------------- |
+| `U[1,2,2]`          | `payoff_array[1,2,2,:]`   | payoffs of all players for actions 1, 2 and 2: `(4,2,2)` / `[4,2,2]` |
+| `U[1,2,2][1]`       | `payoff_array[1,2,2,1]`   | payoff of player 1 for that action profile: `4`                 |
+| `U[1,2,2][2]`       | `payoff_array[1,2,2,2]`   | payoff of player 2 for that action profile: `2`                 |
+| `U[1,2,2][3]`       | `payoff_array[1,2,2,3]`   | payoff of player 3 for that action profile: `2`                 |
+
+```julia
+julia> size(payoff_array)
+(2, 2, 2, 3)
+julia> payoff_array[1,2,2,1]
+4
+julia> payoff_array[1,2,2,:]
+3-element Vector{Int64}:
+ 4
+ 2
+ 2
+```
+
+When Julia prints `payoff_array`, each slice `[:, :, a₃, n]` is the matrix of the payoffs of player `n` when player 3 plays action `a₃`, with the actions of player 1 on the rows and those of player 2 on the columns. The `4` of player 1 above is therefore in the first row, second column of the slice `[:, :, 2, 1]`:
+
+```julia
+julia> payoff_array[:,:,2,1] # payoffs of player 1 when player 3 plays action 2
+2×2 Matrix{Int64}:
+ 3  4
+ 2  1
+```
+
+Similarly, `payoff_array[:,:,:,n]` is the whole payoff array of player `n` alone.
+
+#### Games from GameTheory.jl
+
+When [GameTheory.jl](https://github.com/QuantEcon/GameTheory.jl) is loaded, [`nash_cp`](@ref) and [`nash_se`](@ref) also accept its `NormalFormGame` (or any other subtype of `AbstractNormalFormGame`) directly; see the [GameTheory.jl extension](ext.md) page.
+
 
 ## [Some examples](@id examples)
 
